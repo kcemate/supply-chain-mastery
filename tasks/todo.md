@@ -7,16 +7,25 @@
 - [x] Inspect project shape, package scripts, large files, and local config before initializing Git.
 - [x] Add repo hygiene files and keep generated/local artifacts out of the first commit.
 - [x] Run frontend and backend verification from the working copy.
-- [ ] Create a private `kcemate/supply-chain-mastery` GitHub repository.
-- [ ] Commit the publishable source/content set.
-- [ ] Push the initial commit to GitHub.
-- [ ] Record final repository URL and verification results.
+- [x] Create a private `kcemate/supply-chain-mastery` GitHub repository.
+- [x] Commit the publishable source/content set.
+- [x] Push the initial commit to GitHub.
+- [x] Record final repository URL and verification results.
 
 ### Verification Results
 
 - `npm run verify`: passed after installing the missing Playwright Chromium runtime.
 - `npm run design:lint`: passed with 0 errors and 0 warnings.
 - `npm run check` in `backend/`: passed.
+
+### Publish Review
+
+- Repository: https://github.com/kcemate/supply-chain-mastery
+- Visibility: private.
+- Branch: `main`.
+- Initial commit: `6551b31`.
+- Included source/content: frontend app, backend API, course scripts, audio, docs, PDFs, build utilities, and working notes.
+- Excluded generated/local artifacts: dependency folders, `dist/`, `tmp/`, backups, local deployment metadata, `config.js`, logs, and generated task screenshots.
 
 ## Active Fidelity Replan - 2026-06-18
 
