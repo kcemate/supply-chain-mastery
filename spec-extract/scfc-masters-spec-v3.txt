@@ -1,0 +1,1895 @@
+SCFC · Masters Program v3 — Stanford-Grade
+Upgrade Spec
+  Document type: Drop-in upgrade specification for an autonomous coding agent. Pre-
+  requisite: scfc-masters-spec.md (v2) and scfc-masters.html (reference) must be in
+  hand. This document does not restate v2; it specifies what changes. Output target: A
+  modified single HTML file (or split per v2 §11.2) that implements the v3 changes
+  additively. Existing v2 progress should be migrated, not destroyed. Scope: Stanford
+  MS&E + GSB OIT synthesis, mid-career operator audience, 8–12 week target, mix of
+  worked examples and full derivations on capstone days, expansion from 12 to 18
+  domains.
+
+
+
+
+0 · How this document relates to v2
+v2 shipped with 60 days, 12 domains, 12 cases, 50 glossary terms, 22 reading entries. v3
+keeps that engine and extends it. The rules are:
+
+   Do not break v2. The existing localStorage key scfc-masters-v2 migrates with a
+   one-time transformation to scfc-masters-v3 . Existing user progress (streak,
+   completion history, day position) is preserved.
+
+   The engine is unchanged in shape. The state machine ( §3 of v2 spec), persistence
+   schema ( §8 ), and component CSS ( §7 ) all remain. v3 adds fields to existing schemas
+   and content to existing arrays — no architectural changes.
+
+   The visual design is unchanged. No new colors, no new fonts, no new layouts. The
+   Machine aesthetic is locked.
+
+   What changes:
+
+    1. Domain count: 12 → 18 (§2 below)
+
+    2. Curriculum count: 60 → ~80 days, with 8 marked as capstones (§3)
+
+    3. Glossary: +30 terms (§4)
+
+    4. Reading list: +18 entries (§5)
+
+    5. Schema additions: cap , dur , deriv fields on Day; tag field on Reading entry (§6)
+    6. UI additions: capstone-day badge, derivation panel, “FOUNDATION 60” vs
+        “MASTERY +20” mode toggle (§7)
+
+    7. Migration logic from v2 state (§8)
+
+If v2 says one thing and this document says another, this document wins for v3.
+
+
+
+
+1 · Why these changes
+The current v2 curriculum maps approximately to MS&E 260 (Introduction to Operations
+Management) and the operations portion of OIT 262 — solid undergrad / first-year-MBA
+territory. To reach the breadth and depth of a Stanford MS in supply chain (i.e., MS&E
+coursework plus elective OIT coursework), the curriculum needs:
+
+More domains. Stanford MS&E and GSB OIT collectively cover six areas v2 doesn’t touch
+with discipline:
+
+    Operations Research / Network Optimization — the spine of MS&E 211, 212, 260, OIT
+    245/247/248. Linear programming intuition, facility location MILP, vehicle routing. v2
+    mentions LP in one lecture day; the canon deserves a domain.
+
+    Sustainability & Climate Operations — Erica Plambeck’s home territory at Stanford.
+    Scope 3 carbon, supplier emissions, operational hedging against climate risk, the
+    Walmart sustainability index. v2 has one lecture day on Scope 3; the field has a decade
+    of canonical work behind it.
+
+    Geopolitics & Industrial Policy — CHIPS Act, IRA, friend-shoring, decoupling. None of
+    this existed in v1 textbooks. It’s what supply chain operators actually face in 2026.
+
+    Healthcare & Pharma Supply Chain — MS&E 263 (Healthcare Operations) is a full
+    Stanford course. Cold chain, DSCSA serialization, FDA compliance, vaccine distribution.
+    None in v2.
+
+    Semiconductor Supply Chain — TSMC concentration risk, allocation under shortage,
+    lead times of 26+ weeks, the lithography monopoly. The most-discussed supply chain
+    on earth right now, and v2 doesn’t mention it.
+
+    Behavioral Operations — Sterman’s beer game, Croson on bullwhip behavior, Gino-
+    Pisano on heuristics, Bendoly’s bodies of knowledge. Stanford OIT and MIT Sloan both
+    teach this; v2 mentions bullwhip’s behavioral roots but doesn’t develop the field.
+
+More math. v2 has three quantitative panels (EOQ, newsvendor, EVPI). A real Stanford MS
+student derives these results, doesn’t just compute them. v3 adds a derivation panel for ~8
+capstone days where the math is the lesson, not the answer. These days are 15–20 minutes
+(vs the 5-minute default), explicitly marked, and optional in the sense that progressing past
+them requires only completing them, not deriving from memory.
+
+More breadth in the canon. v2 cites 22 works. v3 adds 18 more, weighted toward Stanford
+faculty and OIT-area canonical research: Hau Lee on Triple-A, Plambeck on sustainability,
+Bimpikis on COVID supply, Sterman on systems dynamics, Pisano on capabilities,
+Brandenburger-Stuart on value capture.
+
+Honest about what 8–12 weeks delivers. A Stanford MS is two years of full-time study.
+SCFC delivers, at the new bar, a working principal’s fluency across that body of knowledge
+— not the proofs, the published papers, or the research career. The product positions as
+“Foundation 60” (the existing v2 60 days, slightly reorganized) plus “Mastery +20” (an
+optional extension covering the new domains and capstones). A user who completes both
+has 80 days of structured engagement against the canon.
+
+
+
+
+2 · Domain restructure
+v2 had 12 domains. v3 has 18. The reorganization preserves all v2 content under new
+domain numbers, then adds 6 domains with new days.
+
+
+2.1 v3 domain list
+
+ const DOMAINS = [
+      { n: 1,   name: 'FOUNDATIONS' },       // unchanged from v2
+      { n: 2,   name: 'DEMAND'       },      // unchanged
+      { n: 3,   name: 'INVENTORY'    },      // unchanged
+      { n: 4,   name: 'SOURCING'     },      // unchanged
+      { n: 5,   name: 'CONTRACTS'    },      // unchanged
+      { n: 6,   name: 'SUPPLIERS'    },      // unchanged
+      { n: 7,   name: 'LOGISTICS'    },      // unchanged
+      { n: 8,   name: 'COMMODITY'    },      // unchanged
+      { n: 9,   name: 'RISK'         },      // unchanged
+      { n: 10, name: 'ANALYTICS'     },      // narrowed; new OR domain takes some content
+      { n: 11, name: 'STRATEGY'      },      // unchanged
+      { n: 12, name: 'APPLIED'       },      // unchanged
+      // NEW DOMAINS BELOW
+      { n: 13, name: 'NETWORKS'      },      // OR / network optimization / facility location math
+      { n: 14, name: 'SUSTAIN'       },      // sustainability / climate / Scope 3 / cap-and-trade
+      { n: 15, name: 'GEOPOLITICS' },        // CHIPS Act, IRA, friend-shoring, decoupling
+      { n: 16, name: 'HEALTHCARE'    },      // pharma cold chain, DSCSA, vaccine distribution
+      { n: 17, name: 'SEMICOND'      },      // semiconductor SC, allocation, lithography monopoly
+      { n: 18, name: 'BEHAVIOR'      },      // beer game, Sterman, Gino-Pisano, anchoring in ops
+ ];
+The VU meter row count goes from 12 to 18. The CSS for .vu-mini already supports
+arbitrary row counts; no style change required, but the meters block needs to scroll if the
+panel becomes too tall on mobile. Add max-height: 280px; overflow-y: auto; to
+.meters-mini on mobile breakpoints (≤720px).
+
+
+2.2 Two-tier program structure
+The 80 days are presented as two tiers. The toggle UI is a small badge on the nameplate
+( §7.4 ).
+
+    Foundation 60 (Days 1–60): the v2 curriculum, slightly reorganized so days 56–60
+    (which were “Applied” in v2) become the lead-ins to the Mastery extension. The existing
+    reference build is the Foundation tier verbatim.
+
+    Mastery +20 (Days 61–80): the new content. Six new domains × ~3 days each, plus 1–2
+    capstone days per new domain. A user must complete Foundation before Mastery is
+    unlockable (mode toggle is locked until day 60 is complete).
+
+The user can replay Foundation days from the curriculum grid at any time. Mastery days
+appear in the grid only after Foundation completion.
+
+
+
+
+3 · Curriculum: the new 20 days
+   Each day below follows the schema documented in v2 §6.2, plus the new fields
+   described in §6 below.
+
+
+Day 61 — Triple-A Supply Chain (case)
+    dom: 1 (FOUNDATIONS — extends v2)
+
+    f: Triple-A Framework · Agility, Adaptability, Alignment
+
+    o: Hau Lee (HBR 2004)
+
+    cite: Lee, H. L. “The Triple-A Supply Chain.” Harvard Business Review, October 2004.
+
+    sum: Speed and cost efficiency are not enough. The best supply chains are
+    simultaneously agile (respond fast to short-term changes), adaptable (evolve as
+    markets evolve), and aligned (incentives match across partners). The framework
+    explains why high-performing chains beat efficient-but-fragile ones.
+
+    dur: 5
+
+    case “The Three-A Stress Test”:
+pre: A category leader presents your chicken supply network as “world-class.” You
+are asked to grade it on Lee’s three As before you sign off.
+
+setup lines:
+
+    // network audit:
+
+    // AGILITY · response to 2-wk demand shock
+
+    // ADAPT · evolution over 5-yr horizon
+
+    // ALIGN · incentive structure across tiers
+
+   blank
+
+    // observed:
+
+    // 8-wk lead time (poor agility)
+
+    // no sustainability metric (poor adapt)
+
+    // tier-1 paid on volume only (poor align)
+
+   blank
+
+    // "world-class" — really? [amber]
+
+ctx: AGILITY=8 wk · ADAPT=none · ALIGN=volume-only · TIER=Strategic
+
+D1 “WHICH A IS WEAKEST.”:
+
+   good +2 “ALIGNMENT — incentives drive everything else” → “lee’s most subtle
+   insight. agility and adaptability are constrained by alignment. fix incentives first,
+   the others follow. the chicken steering team has been treating agility as the
+   bottleneck for two years.”
+
+   warn 0 “AGILITY — 8-week lead time is the binding constraint” → “plausible at
+   first glance, but the 8-week lead time is itself a consequence of misaligned
+   incentives — tier-1 has no reason to invest in flexibility because they’re paid on
+   volume. you’re treating a symptom.”
+
+   warn -1 “ADAPTABILITY — no sustainability tracking is a 5-year problem” →
+   “true but not the binding constraint right now. adapt without align and you’ll
+   evolve in the wrong direction.”
+
+D2 “WHAT FIX.”:
+
+   good +2 “REWORK INCENTIVE STRUCTURE / GAINSHARING ON FLEX” → “lee’s
+            prescribed move. tier-1 gets paid for flex performance (lead time variance, fill
+            rate) not just volume. you’ve changed the equilibrium.”
+
+            bad −2 “INVEST IN AGILITY DIRECTLY / NEW CAPACITY” → “$15M capex on
+            agility a misaligned supplier won’t sustain. they’ll absorb it as margin and tell you
+            they’re agile next quarter while behaving the same.”
+
+            warn 0 “ANNUAL SCORECARD ON ALL THREE AS” → “useful but doesn’t
+            change behavior on its own. lee found that scorecards without compensation
+            linkages produce zero behavioral change.”
+
+     opt: [0, 0]
+
+     fr: HAU LEE’S TRIPLE-A (2004) IS THE STANFORD CANON ON OPERATIONAL
+     EXCELLENCE BEYOND COST. THE INSIGHT IS THAT THE THREE AS ARE
+     LEXICOGRAPHICALLY ORDERED WHEN THEY CONFLICT — ALIGNMENT GATES
+     ADAPTABILITY GATES AGILITY. A SUPPLY CHAIN THAT IS FAST AND FLEXIBLE BUT
+     MISALIGNED IS A SUPPLY CHAIN THAT WILL PRODUCE THE WRONG OUTCOME
+     QUICKLY. THE PRINCIPAL CHECKS ALIGNMENT BEFORE INVESTING IN SPEED.
+
+
+Day 62 — Newsvendor Derivation (capstone, lecture+derivation)
+  dom: 3 (INVENTORY — extends v2)
+
+  f: Newsvendor · First-Order Optimality
+
+  o: Edgeworth (1888); Arrow, Harris & Marschak (1951)
+
+  cite: Arrow, K. J., Harris, T. & Marschak, J. “Optimal Inventory Policy.” Econometrica
+  19(3), 1951.
+
+  sum: The critical fractile result Q* such that F(Q*) = Cu/(Cu+Co) is not magic. It falls out
+  of differentiating the expected cost function and setting it to zero. Doing the derivation
+  once changes how you think about every stocking problem.
+
+  dur: 18
+
+  cap: true
+
+  deriv: full derivation (see schema §6.3 below for format)
+
+  The v2 day 12 case (newsvendor promo buy) remains. This new day 62 is its companion
+  derivation, optional but recommended.
+
+  content (lecture-style, with derivation panel):
+
+     brief: We’ve used the newsvendor formula. Now we prove it. This is one of the
+      cleanest applications of first-order optimality conditions in operations research. If
+      you can derive it, you can derive its variants — multi-item, capacity-constrained,
+      price-dependent — without help.
+
+      derivation steps (rendered as the new derivation panel):
+
+       1. Setup: Demand D is a continuous random variable with CDF F(d) and density
+          f(d). Order quantity Q is the decision. Per-unit underage cost is Cu (margin lost
+          when D > Q). Per-unit overage cost is Co (scrap cost when D < Q).
+
+       2. Expected cost: For a given Q,
+
+            E[C(Q)] = Co · ∫₀^Q (Q − d) f(d) dd          +   Cu · ∫_Q^∞ (d − Q) f(d) dd
+
+
+       3. Differentiate w.r.t. Q (Leibniz rule):
+
+
+            dE[C]/dQ = Co · F(Q)     −    Cu · (1 − F(Q))
+                      = (Co + Cu) · F(Q)      −     Cu
+
+
+       4. First-order condition: Set dE[C]/dQ = 0:
+
+            (Co + Cu) · F(Q*) = Cu
+            F(Q*) = Cu / (Co + Cu)                 ← the critical fractile
+
+
+       5. Second-order check: d²E[C]/dQ² = (Co + Cu) · f(Q) ≥ 0, so Q* is a minimum.
+
+       6. Interpretation: F(Q*) is the probability of not stocking out at Q*. It equals the
+          ratio of the cost of one too few to the cost of one too few plus one too many.
+          When Cu >> Co, F(Q*) → 1 (stock high). When Co >> Cu, F(Q*) → 0 (stock low).
+
+      principal framing (replaces fr): THE DERIVATION IS WORTH MORE THAN THE
+      FORMULA. ONCE YOU’VE DIFFERENTIATED THE NEWSVENDOR EXPECTED-COST
+      FUNCTION, EVERY VARIANT — DEMAND CORRELATED ACROSS PRODUCTS,
+      PRICE-DEPENDENT DEMAND, BACKLOGGABLE SHORTAGE, MULTI-PERIOD
+      INVENTORY — IS A FAMILIAR EXTENSION RATHER THAN A NEW MYSTERY. THIS IS
+      THE DIFFERENCE BETWEEN A USER OF OPERATIONS RESEARCH AND A
+      PRACTITIONER OF IT. ARROW, HARRIS & MARSCHAK (1951) FORMALIZED THE
+      PROOF; THE PRINCIPAL DOES IT ONCE EVERY FEW YEARS TO STAY HONEST.
+
+
+Day 63 — Network Optimization Intuition (case)
+   dom: 13 (NETWORKS — new)
+
+   f: p-Median Facility Location · MILP
+o: Hakimi (1964); ReVelle & Swain (1970); Daskin (2013)
+
+cite: Daskin, M. S. Network and Discrete Location: Models, Algorithms, and
+Applications. 2nd ed., Wiley, 2013.
+
+sum: The p-median problem chooses p facility locations from a set of candidates to
+minimize total demand-weighted distance to customers. It’s the foundational supply
+chain network design model and a binding constraint on every DC discussion.
+
+dur: 8
+
+case “The Three-DC Question”:
+
+   pre: VP of distribution wants to know whether 2 DCs (current) or 3 DCs (proposal) is
+   right. CFO wants the math. You have a candidate set of 8 cities and demand by
+   region.
+
+   setup lines:
+
+         // model: p-median MILP
+
+         // candidates: 8 cities
+
+         // demand: 12 regions, weighted by volume
+
+         // atlanta 22%
+
+         // chicago 14%
+
+         // dallas 11%
+
+         // ... (9 more regions)
+
+         blank
+
+         // objective: min Σ (demand_i × distance_i,j) for chosen j
+
+         // constraint: exactly p facilities open
+
+         blank
+
+         // solver returns:
+
+         // p=2: $48M/yr · avg dist 612 mi
+
+         // p=3: $44M/yr · avg dist 421 mi
+
+         // p=4: $43M/yr · avg dist 358 mi
+
+   ctx: P=2,3,4 · CURRENT=$48M · MIN=$43M · LOAD=600M lb/yr
+quant (worked):
+
+    f: min Σ_i Σ_j d_i,j · h_i · y_i,j s.t. Σ_j x_j = p, y_i,j ≤ x_j
+
+    vars:
+
+        [d_i,j, distance from demand i to facility j, miles]
+
+        [h_i, demand at i, % of total]
+
+        [x_j, facility j open (0/1), binary]
+
+        [y_i,j, fraction of i served from j, [0,1]]
+
+    r: Optimal at p=3: Atlanta + Dallas + Chicago. Marginal value of 4th DC:
+    $1M/yr — below NPV threshold.
+
+D1 “WHAT P.”:
+
+    good +2 “P=3 · MARGINAL ANALYSIS” → “correct. the p=4 solution saves only
+    $1M more than p=3 against ~$8M new capex. net NPV negative. classical
+    decreasing-marginal-returns network design.”
+
+    warn 0 “P=4 · LOWEST AVERAGE DISTANCE” → “you optimized for the wrong
+    objective. average distance is a proxy; the cost function already weights it. the
+    marginal analysis says $1M/yr ≠ worth $8M capex.”
+
+    bad −2 “P=2 · PRESERVE THE CURRENT NETWORK” → “you saved capex and
+    accepted $4M/yr in inferior outcomes that compound. five years from now this is
+    a $20M decision against you.”
+
+D2 “WHICH 3 CITIES.”:
+
+    good +2 “ATLANTA + DALLAS + CHICAGO” → “the solver result. each captures a
+    high-density region; they’re far enough apart to minimize overlap. this is the p-
+    median optimum.”
+
+    warn 0 “ATLANTA + DALLAS + LOS ANGELES” → “LA is an instinct play. solver
+    shows chicago dominates LA on weighted distance because midwest demand
+    density beats west-coast density at this volume.”
+
+opt: [0, 0]
+
+fr: NETWORK DESIGN IS DECADAL. ONCE YOU SET P AND PICK THE LOCATIONS,
+YOU LIVE WITH THEM FOR 10–20 YEARS. THE P-MEDIAN MODEL FORCES THE
+QUESTION INTO TRACTABLE TERMS — BUT THE SOLVER’S ANSWER IS ONLY AS
+GOOD AS THE DEMAND FORECAST AND COST PARAMETERS YOU FED IT. DASKIN
+(2013) DEVELOPS THE FAMILY: P-MEDIAN, P-CENTER, COVERING. THE PRINCIPAL
+       UNDERSTANDS WHICH FORMULATION FITS WHICH PROBLEM AND DOES
+       MARGINAL ANALYSIS BEFORE COMMITTING CAPEX.
+
+
+Day 64 — Vehicle Routing Problem (lecture)
+   dom: 13 (NETWORKS)
+
+   f: VRP · NP-Hard Combinatorial Optimization
+
+   o: Dantzig & Ramser (1959); Toth & Vigo (2014)
+
+   cite: Toth, P. & Vigo, D. Vehicle Routing: Problems, Methods, and Applications. SIAM,
+   2014.
+
+   sum: The Vehicle Routing Problem assigns a fleet of vehicles to customer locations such
+   that total distance/time is minimized subject to capacity, time-window, and driver-shift
+   constraints. NP-hard in general — practitioners use heuristics (savings algorithm, tabu
+   search, large neighborhood search). Solving VRP well at scale is worth single-digit
+   millions per year for any large logistics network.
+
+   dur: 5
+
+
+Day 65 — Queueing Intuition · Little’s Law (lecture)
+   dom: 10 (ANALYTICS)
+
+   f: Little’s Law · L = λ × W
+
+   o: Little (1961); Erlang (1909) for the discipline
+
+   cite: Little, J. D. C. “A Proof for the Queuing Formula: L = λW.” Operations Research 9(3),
+   1961.
+
+   sum: For any stable system, average number in system = arrival rate × average time in
+   system. Holds for manufacturing WIP, customer service queues, hospital throughput,
+   even API request handling. The most-used result in operations research.
+
+   dur: 5
+
+
+Day 66 — Queueing Capstone (capstone)
+   dom: 10 (ANALYTICS)
+
+   f: M/M/1, M/M/c, Erlang C
+
+   o: Erlang (1909); Allen-Cunneen for approximations
+
+   cite: Hopp, W. J. & Spearman, M. L. Factory Physics. 3rd ed., 2008. (Ch. 8)
+sum: How many docks does a DC need? How many service desks at peak? Erlang’s
+queueing models give defensible answers. The math is non-trivial but the intuition is
+clean: utilization × variability = wait. As ρ approaches 1, wait blows up.
+
+dur: 18
+
+cap: true
+
+deriv: full
+
+content (lecture+derivation):
+
+    brief: A DC has a single inbound dock receiving trucks. Arrivals are roughly Poisson,
+    service is roughly exponential. How does wait time scale with utilization?
+
+    derivation steps:
+
+    1. Setup: M/M/1 queue. Arrivals λ (per hour), service rate µ (per hour). Utilization ρ
+          = λ/µ. Stable if ρ < 1.
+
+    2. State probabilities (steady-state, derive from balance equations):
+
+            π_n = ρ^n · (1 − ρ),       for n = 0, 1, 2, ...
+
+
+    3. Average number in system:
+
+
+            L = Σ n · π_n = ρ / (1 − ρ)
+
+
+          Derivation uses Ʃ n·ρ^n = ρ/(1−ρ)² for |ρ| < 1.
+
+    4. Apply Little’s Law (L = λW):
+
+            W = L / λ = 1 / (µ(1 − ρ))
+
+
+    5. Wait time in queue alone (excluding service):
+
+            Wq = ρ / (µ(1 − ρ)) = (1/µ) · ρ/(1−ρ)
+
+
+    6. The pole at ρ = 1: wait time goes to infinity as utilization approaches 1. This is
+          the fundamental tradeoff of operations: you cannot run at 100% utilization and
+          have low wait. Variability requires slack.
+
+    7. Numerical example: ρ = 0.7 → average wait ≈ 2.33 service times. ρ = 0.9 → 9.0.
+          ρ = 0.95 → 19.0. The cost of pushing utilization is non-linear.
+      fr: ERLANG (1909) AND LITTLE (1961) GAVE OPERATIONS THE QUEUEING CANON.
+      THE PRACTICAL INSIGHT THAT EVERY MANAGER MUST INTERNALIZE: WAIT TIME
+      IS NOT LINEAR IN UTILIZATION — IT IS HYPERBOLIC. RUNNING A DC AT 95%
+      UTILIZATION DOES NOT COST 5% MORE WAIT THAN 90% — IT COSTS 2× MORE.
+      ANY SCHEDULER WHO PUSHES UTILIZATION TO THE CEILING WITHOUT
+      QUANTIFYING THE QUEUEING COST IS DOING ARITHMETIC AGAINST PHYSICS.
+      THE PRINCIPAL TARGETS UTILIZATION IN THE 70–85% BAND FOR VARIABLE
+      SYSTEMS, ACCEPTS HIGHER ONLY WHERE VARIABILITY IS LOW.
+
+
+Day 67 — Sustainability & Operations (case)
+   dom: 14 (SUSTAIN — new)
+
+   f: Operational Sustainability · Triple Bottom Line in OM
+
+   o: Plambeck (Stanford); Lee, Plambeck & Yatsko on Walmart
+
+   cite: Plambeck, E. L. “Reducing greenhouse gas emissions through operations and
+   supply chain management.” Energy Economics 34, 2012.
+
+   sum: The 80%+ of corporate emissions that live in Scope 3 (the supply chain) cannot
+   be reduced by buying renewable energy at headquarters. They require operational
+   changes — supplier selection, transportation mode, packaging weight, demand
+   smoothing. Stanford’s Plambeck has documented the playbook over 20 years.
+
+   dur: 8
+
+   case “The Walmart Question”:
+
+      pre: An executive memo asks whether Chick-fil-A should adopt a “supplier
+      sustainability scorecard” similar to Walmart’s. Operations is asked for a
+      recommendation in 2 weeks.
+
+      setup lines:
+
+            // scope 3 emissions:
+
+            // purchased goods 62% (cat. 1)
+
+            // transport 18% (cat. 4)
+
+            // capital goods 7% (cat. 2)
+
+            // ... (12 other categories)
+
+            blank
+
+            // ~80% of the company's footprint is upstream.
+    // internal energy efficiency: ~3% of total.
+
+    blank
+
+    // walmart scorecard reduced supplier emissions ~20%
+
+    // over 8 years (lee, plambeck, yatsko 2012)
+
+ctx: SCOPE 3=80% · CAT 1=62% · CAT 4=18% · WALMART REDUCTION=20%/8yr
+
+D1 “PRIMARY MOVE.”:
+
+    good +2 “SUPPLIER SCORECARD W/ EMISSIONS METRIC + COMPENSATION
+    LINKAGE” → “plambeck-style. you measure, you pay for it. the walmart program
+    achieved 20% reduction over 8 years. the alternative (declarations without
+    compensation) achieves nothing.”
+
+    warn 0 “MEASURE EMISSIONS / NO COMPENSATION LINKAGE” → “you’ve
+    created a reporting overhead. plambeck’s research shows declarations without
+    incentives produce 0–3% reduction. the supplier optimizes against what you pay
+    for.”
+
+    bad −2 “INVEST IN ON-SITE RENEWABLE ENERGY” → “you addressed scope
+    1+2 (the 20%) and ignored scope 3 (the 80%). this is the most common
+    corporate sustainability error. you’ll publish a report and your real footprint will
+    be unchanged.”
+
+D2 “TIMELINE EXPECTATION.”:
+
+    good +2 “5–10 YEARS · GRADUAL · EMBED IN QBR” → “plambeck’s data shows
+    20% reduction takes 8 years even with disciplined execution. shorter timelines
+    are corporate theater.”
+
+    warn 0 “3 YEARS · QUARTERLY MILESTONES” → “you set up 12 quarterly
+    failures. the supplier base cannot move that fast on capital decisions (boilers,
+    fleet, packaging lines). you’ll be back at the table in year 2 explaining why.”
+
+    bad −2 “ANNUAL REPORTING / NO TIMELINE COMMITMENT” → “you bought a
+    clean PR cycle. when the next ESG report cycle hits, you’ll be the company
+    without quantified targets and the regulators are increasingly noticing.”
+
+opt: [0, 0]
+
+fr: PLAMBECK’S BODY OF WORK (~2005–PRESENT) ESTABLISHED THAT
+OPERATIONAL SUSTAINABILITY IS A SUPPLY CHAIN PROBLEM, NOT AN ENERGY
+PROCUREMENT ONE. THE WALMART SCORECARD CASE IS THE CANONICAL
+EXAMPLE: A LARGE BUYER USING SUPPLIER COMPENSATION TO MOVE THE TIER-
+      N FOOTPRINT OF AN ENTIRE INDUSTRY. THE PRINCIPAL UNDERSTANDS THAT THE
+      80% IN SCOPE 3 IS WHERE THE ACTUAL CARBON LIVES, AND THAT MOVING IT
+      REQUIRES PUTTING THE METRIC INTO THE SUPPLIER SCORECARD WITH MONEY
+      ATTACHED.
+
+
+Day 68 — Carbon Pricing & Cap-and-Trade (lecture)
+  dom: 14 (SUSTAIN)
+
+  f: Carbon Markets · EU ETS · CBAM
+
+  o: EU ETS Phase IV (2021); CBAM (2023)
+
+  cite: European Commission, “Carbon Border Adjustment Mechanism,” Regulation (EU)
+  2023/956.
+
+  sum: Carbon pricing is no longer abstract. The EU charges €80–100/tonne CO₂ via ETS;
+  CBAM (Carbon Border Adjustment) prices imported carbon as well. For US firms
+  exporting to EU or sourcing from EU, this is a real cost on the P&L. The principal models
+  it as a commodity with futures, basis risk, and pass-through dynamics — exactly v2’s
+  commodity domain framework.
+
+  dur: 5
+
+
+Day 69 — Sustainability Capstone · Carbon Math (capstone)
+  dom: 14 (SUSTAIN)
+
+  f: Activity-Based Scope 3 Calculation
+
+  o: WRI/WBCSD GHG Protocol Scope 3 Standard (2011)
+
+  cite: GHG Protocol. Corporate Value Chain (Scope 3) Accounting and Reporting
+  Standard. WRI/WBCSD, 2011.
+
+  sum: Calculating Scope 3 from real procurement data — not estimates, not industry
+  averages. The Standard defines five calculation methods; the principal picks the right
+  one based on data quality and audit defensibility.
+
+  dur: 18
+
+  cap: true
+
+  deriv: full
+
+  content:
+
+      brief: You receive 480,000 cases of shell eggs annually from a single supplier. EPA
+emission factors and supplier-specific energy data are both available. How do you
+compute the Scope 3 Category 1 (“Purchased Goods”) emissions?
+
+derivation steps:
+
+1. Method hierarchy (per GHG Protocol Scope 3 §7.3.4):
+
+       Method 1: Supplier-specific (highest quality)
+
+       Method 2: Hybrid (supplier-specific + average)
+
+       Method 3: Average-data (industry emission factor × physical units)
+
+       Method 4: Spend-based (industry factor × $ spent)
+
+2. Method 3 calculation (most common in practice):
+
+     Emissions (tCO₂e) = Activity × Emission Factor
+                         = 480,000 cases × 30 dozen/case × 12 eggs/dozen
+                             × 4.8 g CO₂e/egg (USDA EPA factor for shell eggs)
+                         = 480,000 × 360 × 4.8 g
+                         = 829,440,000 g
+                         = 829 tCO₂e/yr
+
+
+3. Method 1 calculation (supplier-specific, from supplier’s actual energy/feed
+   data):
+
+     Supplier reports: 712 tCO₂e/yr for your portion of their volume
+     (lower because their layer barns are 14% more efficient than industry avg)
+
+
+4. Audit defensibility: Method 1 is preferred when data exists but requires
+   verifiable supplier data. Method 3 is acceptable when supplier data is absent.
+   Method 4 (spend-based) is the lowest tier — used when nothing else is available,
+   but increasingly being rejected by audit firms.
+
+5. At the carbon price: At €80/tCO₂e (current EU ETS), the Method 1 number (712
+   tCO₂e) implies €56,960/yr in carbon-equivalent cost embedded in your egg
+   supply — small per case (~$0.12) but real, and growing.
+
+6. The decision: When a supplier offers Method 1 data, accept it (it’s lower than
+   the average). When they don’t, push for it — Method 1 is what gets you
+   defensibility and gives you leverage on the next contract.
+
+fr: SCOPE 3 CALCULATION IS NOT AN ESG EXERCISE — IT IS A PROCUREMENT
+EXERCISE. THE GHG PROTOCOL STANDARD GIVES FOUR METHODS, ORDERED BY
+DATA QUALITY. THE PRINCIPAL ALWAYS PUSHES FOR METHOD 1 OR 2 BECAUSE
+       (A) IT IS DEFENSIBLE IN AUDIT, (B) IT GIVES THE CORRECT NUMBER FOR
+       DECISION-MAKING, AND (C) IT CREATES A REASON FOR THE SUPPLIER TO
+       INVEST IN EFFICIENCY (BECAUSE NOW THEY’RE MEASURED ON IT). USING
+       METHOD 4 (SPEND-BASED) IS LIKE USING SHIPPED-WEIGHT FOR PRICING — IT’S
+       THE TOOL OF LAST RESORT, NEVER THE FIRST CHOICE.
+
+
+Day 70 — Geopolitical Supply Chain (case)
+   dom: 15 (GEOPOLITICS — new)
+
+   f: Friend-shoring · Decoupling · Chokepoint Analysis
+
+   o: Yellen (2022, friend-shoring); Witt et al. (2023, decoupling)
+
+   cite: Witt, M. A., Lewin, A. Y., Li, P. P. & Gaur, A. “Decoupling in international business:
+   Evidence, drivers, impact, and implications.” Journal of World Business 58(2), 2023.
+
+   sum: Geographic concentration is a strategy, not just a fact. The CHIPS Act, IRA, and EU
+   Critical Raw Materials Act are explicitly redirecting supply chain capital. Operators in
+   2026 must decide whether to chase the subsidies, hedge against decoupling, or hold
+   position.
+
+   dur: 8
+
+   case “The Single-Country Sourcing Question”:
+
+       pre: 73% of your specialty packaging comes from a single Chinese supplier. The
+       CHIPS Act and IRA don’t apply to your category, but Section 301 tariffs do. Your CFO
+       asks whether to relocate.
+
+       setup lines:
+
+            // concentration:
+
+            // chinese supplier 73% ($28M/yr)
+
+            // mexican alt 18% ($7M/yr)
+
+            // us alt 9% ($3.5M/yr)
+
+            blank
+
+            // section 301 tariff: 25% (currently active)
+
+            // chinese landed cost incl. tariff: still 8% lower than mexico
+
+            // mexico capacity: limited, 6mo to expand
+          blank
+
+          // CFO question: hold or move?
+
+      ctx: SPEND=$38.5M · CHINA=73% · TARIFF=25% · COST GAP=−8%
+
+      D1 “STRATEGY.”:
+
+          warn -1 “HOLD POSITION · ABSORB TARIFF” → “expected-cost works today
+          (china is still 8% cheaper net). but the tariff trajectory is one-way; section 301
+          has been raised, never lowered, since 2018. you’re betting on a reversal that
+          hasn’t happened.”
+
+          good +2 “MOVE TO 50/40/10 · MEXICO PRIMARY · 18-MO TRANSITION” →
+          “friend-shoring play. you accept short-term margin pressure (mexico is 8% more
+          expensive at lower volume) for medium-term resilience. when section 301
+          escalates again — which the literature predicts — you’re already adjusted.”
+
+          warn 0 “RESHORE TO US · 100% DOMESTIC” → “over-rotation. the cost gap is
+          too large; you’d give up 22% margin without proportional risk reduction. friend-
+          shoring is a 70/30 play, not a 100% one.”
+
+      D2 “COMMUNICATION.”:
+
+          good +2 “FRAME AS RISK MANAGEMENT, NOT POLITICS” → “the witt et al.
+          (2023) decoupling research framing. avoid the political narrative; lead with
+          disruption probability × cost. the audit committee approves on those terms.”
+
+          bad −2 “FRAME AS GEOPOLITICAL ALIGNMENT” → “you’ve made a
+          procurement decision political. half your stakeholders disagree with the framing.
+          the decision was right; the framing makes it fragile to leadership turnover.”
+
+      opt: [1, 0]
+
+      fr: THE 2018–PRESENT ERA OF INDUSTRIAL POLICY (TRUMP TARIFFS → BIDEN
+      CHIPS/IRA → EU CRITICAL RAW MATERIALS) HAS PERMANENTLY CHANGED
+      SUPPLY CHAIN STRATEGY. SINGLE-COUNTRY CONCENTRATION IS NOW A
+      POLICY-DEPENDENT BET. THE PRINCIPAL’S MOVE IS NOT TO PICK SIDES BUT TO
+      FRAME EVERY GEOGRAPHIC CONCENTRATION DECISION AS RISK MANAGEMENT
+      — DISRUPTION PROBABILITY × DISRUPTION COST — RATHER THAN POLITICS.
+      THIS IS THE FRAMEWORK THAT SURVIVES LEADERSHIP TRANSITIONS AND
+      SCALES TO THE NEXT POLICY CYCLE.
+
+
+Day 71 — CHIPS Act & Industrial Policy (lecture)
+   dom: 15 (GEOPOLITICS)
+  f: Industrial Policy as Supply Chain Lever
+
+  o: CSIS (2023); Lovely (2023)
+
+  cite: Lovely, M. E. “Manufacturing Resilience: The US Drive to Reorder Global Supply
+  Chains.” Economic Strategy Group, 2023.
+
+  sum: $200B+ CHIPS Act + $370B IRA + Bipartisan Infrastructure Law = ~$100B/yr in
+  industrial subsidies for the next 5 years. The largest peacetime industrial policy
+  intervention in US history. Operators in eligible categories (semis, EV batteries, clean
+  energy, advanced packaging) are restructuring strategy around the subsidy stack.
+
+  dur: 5
+
+
+Day 72 — Healthcare Supply Chain (case)
+  dom: 16 (HEALTHCARE — new)
+
+  f: Cold Chain Operations · Pharma Distribution
+
+  o: Stanford MS&E 263; Scheinker (2024)
+
+  cite: Scheinker, D. & Brandeau, M. L. “Healthcare operations management: A bridge to
+  the future.” Annals of Operations Research, various.
+
+  sum: Pharma cold chain is the most demanding logistics environment in commerce.
+  Failure modes are clinical, not commercial — a temperature excursion doesn’t reduce
+  margin, it kills patients. The discipline is: redundant temperature monitoring, validated
+  lanes, and audit trails.
+
+  dur: 8
+
+  case “The Vaccine Allocation Question”:
+
+      pre: A specialty distributor is considering a contract with a pharma supplier for cold-
+      chain (2–8°C) vaccine distribution. 6,000 units/month, 4 metro markets. The
+      contract requires audit-ready temperature logs at all transitions.
+
+      setup lines:
+
+           // pharma cold chain requirements:
+
+           // temperature: 2–8°C continuous
+
+           // transition logs: audit-ready, signed
+
+           // excursion handling: <5 min before alert
+
+           // recall capability: <24h to all consignees
+    blank
+
+    // volume: 6,000 units/mo, 4 metros
+
+    // margin uplift over std cold chain: 12%
+
+    // capex required: $480k (validated containers + monitoring)
+
+    // liability exposure if excursion: $4–9M per event
+
+ctx: VOL=6,000 u/mo · MARGIN=+12% · CAPEX=$480k · LIAB=$4–9M
+
+D1 “TAKE THE CONTRACT.”:
+
+    warn 0 “TAKE IT · UPSIDE WORTH RISK” → “12% margin uplift on $X is real, but
+    you’ve contracted to a liability ceiling 8–18× the annual margin gain. one
+    excursion in a 5-year contract destroys the entire economics.”
+
+    good +2 “TAKE IT · WITH FORMAL RISK MGMT INVESTMENT” → “you’ve sized
+    the liability. the answer is yes, but only with an additional $200k/yr in monitoring
+    redundancy, dedicated cold-chain ops, and FDA audit prep. net economics still
+    positive after that.”
+
+    bad −2 “DECLINE · TOO MUCH RISK” → “you walked from $X/yr in margin uplift
+    because you didn’t size the risk. healthcare logistics is high-margin precisely
+    because the operational bar is high; declining all of it on principle leaves you in
+    the commodity logistics market.”
+
+D2 “MOST-IMPORTANT INVESTMENT.”:
+
+    good +2 “REDUNDANT TEMPERATURE MONITORING / 24/7 ALERT” → “the FDA
+    expects this. it’s also where 80% of preventable excursions are caught. minimum
+    cost, maximum risk reduction.”
+
+    warn 0 “INSURANCE / EXCURSION COVERAGE” → “addresses the financial tail
+    but not the operational one. an FDA Form 483 is not just a financial event — it
+    shuts down your contract regardless of insurance.”
+
+    bad −2 “DRIVER TRAINING” → “important but lowest-ROI of the choices. driver
+    error accounts for <10% of pharma cold chain incidents per FDA data.”
+
+opt: [1, 0]
+
+fr: HEALTHCARE SUPPLY CHAIN IS WHERE OPERATIONS RESEARCH MEETS
+REGULATORY LIABILITY. THE FDA AND DSCSA HAVE TURNED PHARMA
+DISTRIBUTION INTO A FORMAL VALIDATION DISCIPLINE — SERIALIZATION, EPCIS
+DATA EXCHANGE, COLD-CHAIN AUDIT TRAILS. STANFORD MS&E 263
+     (HEALTHCARE OPERATIONS) DEVELOPS THE QUANTITATIVE TOOLS FOR THIS
+     DOMAIN, AND THE CONSEQUENCE OF GETTING IT WRONG IS NOT MARGIN LOSS
+     BUT PATIENT HARM. THE PRINCIPAL TREATS HEALTHCARE SUPPLY CHAIN AS A
+     SEPARATE DISCIPLINE WITH ITS OWN ECONOMICS, NOT AS A HIGH-MARGIN
+     VARIANT OF GENERAL LOGISTICS.
+
+
+Day 73 — DSCSA & Pharma Compliance (lecture)
+  dom: 16 (HEALTHCARE)
+
+  f: DSCSA · Item-Level Serialization
+
+  o: FDA (Drug Quality and Security Act, 2013); fully enforced 2024
+
+  cite: FDA. Drug Supply Chain Security Act (DSCSA): Implementation Guide. 2024.
+
+  sum: As of 2024, every prescription drug in the US has unit-level serialization, end-to-
+  end electronic chain-of-custody (EPCIS), and verifiable transactions at every handoff.
+  The largest mandatory traceability rollout in commerce history. Operators outside
+  healthcare should study it; serialization is coming for food, electronics, and apparel.
+
+  dur: 5
+
+
+Day 74 — Semiconductor Supply Chain (case)
+  dom: 17 (SEMICOND — new)
+
+  f: Concentration Risk · Lead Time · Allocation
+
+  o: Lee (2022, semiconductor crisis); CSIS (2023)
+
+  cite: Allen, G. C. Sourcing Requirements and U.S. Technological Competitiveness. CSIS,
+  2024.
+
+  sum: TSMC produces ~60% of advanced semiconductors and ~90% of the most-
+  advanced (≤5nm). ASML’s EUV lithography monopoly. Lead times of 26+ weeks during
+  shortage. The most-discussed supply chain in the world; understanding it is operator
+  literacy in 2026.
+
+  dur: 8
+
+  case “The Allocation Crisis”:
+
+     pre: A semiconductor-dependent product line gets a “30% allocation” notice from
+     your fab partner — meaning you’ll receive 30% of forecasted volume for the next 2
+     quarters. Engineering says they can re-spec to a less-constrained node, but it costs
+     $2M and 9 months.
+setup lines:
+
+    // allocation event:
+
+    // forecasted: 480k units/qtr
+
+    // allocated: 144k (30%)
+
+    // gap: 336k/qtr
+
+   blank
+
+    // re-spec option:
+
+    // move from 5nm → 7nm
+
+    // cost: $2M nre + 9 mo lead
+
+    // 7nm has 2× available capacity
+
+   blank
+
+    // market: lost units = lost revenue + competitive cost
+
+    // $/unit margin: ~$8
+
+ctx: GAP=336k/qtr · MARGIN=$8 · NRE=$2M · LEAD=9mo
+
+D1 “RESPONSE.”:
+
+   good +2 “RE-SPEC TO 7NM · ACCEPT 9MO COST” → “9 months × 336k × $8 =
+   $24M in lost margin during transition, but you escape allocation risk for the
+   foreseeable future. fab capacity at older nodes is structurally larger and less
+   geopolitically concentrated.”
+
+   warn 0 “PAY PREMIUM FOR ADDITIONAL 5NM ALLOCATION” → “the gray
+   market for advanced node allocation runs 2–4× spot. you got the units this
+   quarter but signed up for a ratcheted dependency. next allocation cycle, your
+   premium goes up.”
+
+   bad −2 “ACCEPT THE ALLOCATION · WAIT IT OUT” → “you absorbed $24M in
+   lost margin for 6 months on the bet that allocation eases. semiconductor
+   allocation cycles run 12–18 months. you bet wrong by an order of magnitude.”
+
+D2 “LONG-TERM POSTURE.”:
+
+   good +2 “DUAL-NODE DESIGN · 5NM + 7NM CAPABILITY” → “engineering
+   capability for both nodes means you can flex against allocation in real time. the
+   cost is product complexity; the benefit is permanent allocation insurance.”
+           warn 0 “STRATEGIC PARTNERSHIP / CAPACITY RESERVATION” → “TSMC offers
+           reserved-capacity contracts for $20M+ commitments. works for hyperscalers;
+           for $30M annual customers, it’s a misallocation.”
+
+     opt: [0, 0]
+
+     fr: THE SEMICONDUCTOR INDUSTRY HAS THE MOST CONCENTRATED, MOST
+     GEOGRAPHICALLY-EXPOSED SUPPLY CHAIN ON EARTH. TSMC FOR ADVANCED
+     LOGIC; ASML FOR EUV LITHOGRAPHY; SAMSUNG/MICRON/SK HYNIX FOR DRAM;
+     A HANDFUL OF JAPANESE FIRMS FOR PHOTORESIST. THE ALLOCATION
+     DYNAMICS ARE GAME-THEORETIC — WHEN CAPACITY IS CONSTRAINED, THE FAB
+     ALLOCATES TO ITS LARGEST AND MOST STABLE CUSTOMERS FIRST. THE
+     PRINCIPAL UNDERSTANDS THAT BUYING SEMIS IS NOT BUYING WIDGETS; IT IS
+     BUYING A POSITION IN AN ALLOCATION PRIORITY QUEUE, AND THE COST OF
+     MOVING UP THAT QUEUE IS COMMITMENT VOLUME.
+
+
+Day 75 — Lithography Monopoly · ASML (lecture)
+  dom: 17 (SEMICOND)
+
+  f: Single-Vendor Dependency in High-Tech
+
+  o: Industry analysis; Mazzucato on industrial policy
+
+  cite: Mazzucato, M. The Entrepreneurial State: Debunking Public vs Private Sector
+  Myths. Anthem Press, 2013.
+
+  sum: ASML is the sole supplier of EUV lithography machines worldwide. Each machine
+  costs ~$200M, requires 40+ trucks to ship, and is the gating technology for ≤7nm
+  semiconductor production. The most concentrated single-vendor dependency in
+  modern industry — and the geopolitical leverage point of US export controls.
+
+  dur: 5
+
+
+Day 76 — Behavioral Operations (case)
+  dom: 18 (BEHAVIOR — new)
+
+  f: The Beer Distribution Game · Sterman’s Findings
+
+  o: Sterman (1989); Croson & Donohue (2006)
+
+  cite: Sterman, J. D. “Modeling Managerial Behavior: Misperceptions of Feedback in a
+  Dynamic Decision Making Experiment.” Management Science 35(3), 1989.
+
+  sum: Sterman’s beer game shows that bullwhip emerges even with full information and
+  rational players, because humans systematically misperceive feedback delays. The
+implication: bullwhip is partly a behavioral problem and information sharing alone
+doesn’t fix it. Compensation, training, and decision-support tools must address human
+cognitive limits.
+
+dur: 8
+
+case “The Order-Up-To Override”:
+
+    pre: Your sourcing team has been running an automated order-up-to inventory
+    policy for 3 years. A new VP is uncomfortable letting an algorithm “make the call”
+    and proposes adding human approval at every reorder. ROI of automation is
+    documented at $4M/yr in carrying-cost reduction.
+
+    setup lines:
+
+         // 3-year automation outcome:
+
+         // carrying cost −18% (~$4M/yr)
+
+         // stockouts −12%
+
+         // override frequency 4% (legitimate edge cases)
+
+         blank
+
+         // proposal: human approval at every reorder
+
+         // expected effect (croson & donohue 2006):
+
+         // inventory overshoot +20–35%
+
+         // stockouts unchanged
+
+         // override frequency 100%
+
+         blank
+
+         // VP wants discomfort relief, not data
+
+    ctx: AUTOMATION SAVINGS=$4M/yr · PROPOSED OVERRIDE=100% ·
+    OVERSHOOT=+25%
+
+    D1 “RESPOND TO THE VP.”:
+
+         good +2 “PRESENT THE BEHAVIORAL DATA / OFFER REVIEW DASHBOARD” →
+         “sterman & croson research shows humans systematically over-order under
+         uncertainty. you’ve documented $4M of bullwhip avoidance. offer a review-only
+         dashboard — VP gets visibility without the override authority.”
+         warn 0 “ACCEPT 50% AS COMPROMISE” → “you’ve replaced 96% automated
+         efficiency with 50% — the math says inventory creep returns at half the rate.
+         compromises that ignore the underlying mechanism don’t compromise the
+         mechanism.”
+
+         bad −2 “DEFER TO VP · INSTITUTE 100% APPROVAL” → “you traded $4M in
+         documented savings for the VP’s emotional comfort. when next year’s QBR
+         shows working capital up 15%, the algorithm gets blamed. classic behavioral-ops
+         failure mode.”
+
+     D2 “LONG-TERM FRAMING.”:
+
+         good +2 “POSITION AS DECISION-SUPPORT, NOT REPLACEMENT” → “gino &
+         pisano framing. the algorithm doesn’t replace judgment; it removes the cognitive
+         load of routine decisions so judgment can be applied to genuine edge cases. VP
+         gets agency where it matters.”
+
+         warn 0 “ESCALATE TO HIGHER LEADERSHIP” → “you’ve made it political. you
+         may win the argument but lose the relationship. behavioral ops literature
+         consistently finds that operations leaders who ground decisions in research
+         outperform those who ground them in authority.”
+
+     opt: [0, 0]
+
+     fr: BEHAVIORAL OPERATIONS (GINO & PISANO 2008, CROSON & DONOHUE 2006,
+     STERMAN 1989) ESTABLISHED THAT THE HUMAN DECISION-MAKER IS NEVER
+     OPTIMAL — AND THAT MOST OPERATIONAL PROBLEMS ARE PARTLY
+     BEHAVIORAL. THE IMPLICATION FOR THE PRINCIPAL IS THAT DESIGNING THE
+     DECISION ENVIRONMENT MATTERS AS MUCH AS THE FORMAL OPTIMIZATION.
+     AUTOMATION REMOVES COGNITIVE LOAD; SCORECARDS DIRECT ATTENTION;
+     INFORMATION DISPLAYS CHANGE BEHAVIOR. THE PRINCIPAL APPLIES
+     BEHAVIORAL INSIGHTS TO THE OPERATING SYSTEM AS A DESIGN INPUT, NOT
+     JUST AS AN AFTER-THE-FACT EXPLANATION OF FAILURE.
+
+
+Day 77 — Anchoring & Negotiation (lecture)
+  dom: 18 (BEHAVIOR)
+
+  f: Anchoring Bias · First-Offer Effects
+
+  o: Tversky & Kahneman (1974); Galinsky & Mussweiler (2001) for negotiation
+
+  cite: Galinsky, A. D. & Mussweiler, T. “First Offers as Anchors: The Role of Perspective-
+  Taking and Negotiator Focus.” J. Personality and Social Psych. 81(4), 2001.
+
+  sum: First-offer anchoring is among the most-replicated effects in negotiation research.
+  Whoever opens the negotiation typically captures 5–15% more value than the
+  responder. Procurement professionals systematically under-use this — they wait for the
+  supplier’s number. The principal opens.
+
+  dur: 5
+
+
+Day 78 — Capstone · Multi-Domain Synthesis (capstone)
+  dom: 12 (APPLIED — extends v2)
+
+  f: Cross-Framework Reasoning Under Constraint
+
+  o: Curated synthesis · Stanford OIT canon
+
+  cite: Lee, Plambeck, Sheffi, Goldratt, Cachon, Tang, Raiffa, Sterman — selected works.
+
+  sum: A real procurement decision pulls from 5+ frameworks simultaneously. This is the
+  integration challenge — not knowing each framework, but knowing which ones apply, in
+  what order, and where they conflict.
+
+  dur: 20
+
+  cap: true
+
+  case “The Friday Decision”:
+
+     pre: Your top supplier (strategic, $142M, 15-year relationship) is in a public
+     sustainability scandal with regulatory exposure. The CEO needs your
+     recommendation by Friday: maintain, terminate, or restructure. The decision pulls
+     from sourcing, contracts, sustainability, geopolitics, and behavioral framing
+     simultaneously.
+
+     setup lines:
+
+            // situation:
+
+            // supplier: Tier-1 strategic, $142M/yr
+
+            // scandal: scope 3 violation, EU CBAM exposure
+
+            // media: 3 articles, 1 European, escalating
+
+            // regulatory: ECHA investigation announced
+
+           blank
+
+            // frameworks in play:
+
+            // KRALJIC strategic placement → partnership
+   // TANG supply concentration → diversify?
+
+   // FISHER-URY BATNA → 9mo to restructure
+
+   // PLAMBECK scope 3 → audit defense
+
+   // STERMAN reactive bullwhip risk
+
+   // SHEFFI resilience flex options
+
+   blank
+
+   // CEO wants the recommendation. friday.
+
+ctx: SPEND=$142M · CONC=high · BATNA=9mo · MEDIA=escalating · REG=open
+
+D1 “FRAMING.”:
+
+   good +2 “REGULATORY-FIRST · STAGED RESTRUCTURE” → “the cardinal
+   principle: the regulator’s clock is faster than yours. lead the framing with
+   regulatory cooperation (CBAM disclosure, supplier audit), then negotiate
+   restructure from that position. preserves the strategic relationship while
+   protecting the reg flank.”
+
+   warn -1 “MAINTAIN POSITION · WEATHER MEDIA” → “you treated the scandal as
+   a media problem. ECHA investigations don’t resolve in news cycles. by week 6
+   you’re either named or you’ve spent 4 weeks unable to negotiate from strength.”
+
+   bad −2 “PUBLICLY TERMINATE / SIGNAL VALUES” → “you’ve solved the optics
+   and created a $142M sourcing crisis with no BATNA. tang’s expected-cost math:
+   9-month transition × peak risk ≈ $80M+ in operational disruption.”
+
+D2 “RESTRUCTURE TERMS.”:
+
+   good +2 “OPEN-BOOK COMPLIANCE / 18-MO MILESTONE / SHARED
+   REMEDIATION COST” → “kraljic-strategic playbook applied with plambeck-
+   scope-3 metrics. supplier accepts open-book on the regulated dimension, you
+   fund the audit, both invest in remediation. multi-year alignment preserved; reg
+   flank cleared.”
+
+   warn 0 “CONTINGENT TERMINATION CLAUSE / 6-MO TRIGGER” → “fisher-ury
+   BATNA play but at the wrong tier. strategic suppliers respond to staged
+   collaboration, not termination triggers. you’ve signaled transactional behavior to
+   a strategic relationship.”
+
+   warn -1 “PRICE CONCESSION ONLY · NO STRUCTURAL CHANGE” → “you
+   treated a structural problem with a transactional remedy. the next scandal cycle
+            (and the literature predicts there will be one) reopens this from a worse position.”
+
+      D3 “INTERNAL COMMUNICATION.”:
+
+            good +2 “ONE-PAGE DECISION MEMO · NAMED FRAMEWORKS” → “CEO and
+            board can defend the decision. the explicit framework citations (kraljic, tang,
+            plambeck, sheffi) signal rigor and survive your eventual rotation out of the role.”
+
+            warn 0 “VERBAL BRIEFING · NARRATIVE FRAMING” → “works for one cycle.
+            when the decision is challenged in board review or audit (and it will be), you
+            defend it from memory rather than from a documented framework.”
+
+      opt: [0, 0, 0]
+
+      fr: THE PRINCIPAL’S CRAFT IS NOT KNOWING ONE FRAMEWORK DEEPLY — IT IS
+      KNOWING WHEN EACH OF THE 6–8 RELEVANT FRAMEWORKS APPLIES, IN WHAT
+      ORDER THEY GATE EACH OTHER, AND WHERE THEY CONFLICT. THIS CASE PULLS
+      FROM KRALJIC (PLACEMENT), TANG (CONCENTRATION ECONOMICS), FISHER-
+      URY (BATNA), PLAMBECK (SCOPE 3 OPERATIONAL EXCELLENCE), AND SHEFFI
+      (RESILIENCE) SIMULTANEOUSLY. THE FRIDAY DEADLINE FORCES INTEGRATION;
+      THE REGULATORY EXPOSURE FORCES ORDERING. THE GRADUATION OUTPUT OF
+      THE SCFC PROGRAM IS THE FLUENCY TO RUN THIS DECISION IN UNDER 60
+      MINUTES, WITH DEFENSIBLE CITATIONS, AND TO BE RIGHT MORE OFTEN THAN
+      NOT.
+
+
+Day 79 — Stochastic Inventory Capstone (capstone)
+  dom: 3 (INVENTORY)
+
+  f: (Q,r) Policy with Random Demand & Lead Time
+
+  o: Hadley & Whitin (1963); Federgruen & Zheng (1992)
+
+  cite: Hadley, G. & Whitin, T. M. Analysis of Inventory Systems. Prentice-Hall, 1963.
+
+  sum: Real reorder policies face both demand variability and lead-time variability. The (Q,
+  r) model — order Q when inventory hits r — has a closed-form optimum that the
+  principal should derive once.
+
+  dur: 18
+
+  cap: true
+
+  deriv: full
+
+  content (lecture+derivation):
+derivation steps:
+
+1. Setup: Demand per period D ~ Normal(µ, σ_D²); lead time L ~ Normal(L̄ , σ_L²);
+   reorder point r; order quantity Q. Service level target 1 − α.
+
+2. Demand during lead time (DDLT):
+
+
+     E[DDLT] = µ · ̄
+                   L
+     Var[DDLT] = ̄
+                 L · σ_D² + µ² · σ_L²          ← key identity
+                  ̄ · σ_D² + µ² · σ_L²)
+     SD[DDLT] = √(L
+
+
+3. Reorder point with safety stock:
+
+     r = E[DDLT] + z_α · SD[DDLT]
+       = µ · ̄           ̄ · σ_D² + µ² · σ_L²)
+             L + z_α · √(L
+
+
+   where z_α is the inverse standard normal at service level 1 − α.
+
+4. Order quantity (separately, via EOQ):
+
+
+     Q* ≈ √(2DS / H)            (Wilson)
+
+
+   Q and r are separately optimized in the standard formulation; joint optimization
+   (Federgruen-Zheng) is more accurate but costlier to compute.
+
+5. Numerical example:
+
+       µ = 200/wk, σ_D = 40, ̄L = 4 wk, σ_L = 1 wk, target service 95% (z = 1.645)
+
+       E[DDLT] = 800
+
+       Var[DDLT] = 4 · 40² + 200² · 1² = 6,400 + 40,000 = 46,400
+
+       SD[DDLT] = 215
+
+       r = 800 + 1.645 · 215 = 800 + 354 = 1,154 units
+
+6. The lead-time-variability dominance: notice that 40,000 (lead time variance
+   contribution) > 6,400 (demand variance contribution). When lead time is
+   variable, it is the dominant source of uncertainty. Reducing lead time variance is
+   typically cheaper than reducing demand variance, and matters more.
+
+fr: THE (Q, R) MODEL IS THE WORKHORSE OF MULTI-PERIOD INVENTORY
+MANAGEMENT. THE NON-OBVIOUS LESSON FROM THE DERIVATION IS THAT
+LEAD-TIME VARIABILITY OFTEN DOMINATES DEMAND VARIABILITY IN DRIVING
+SAFETY STOCK. THIS IS WHY SUPPLIER PERFORMANCE METRICS (ON-TIME
+      DELIVERY, LEAD-TIME CONSISTENCY) MATTER SO MUCH TO INVENTORY
+      ECONOMICS. THE PRINCIPAL’S MOVE WHEN STOCK LEVELS ARE TOO HIGH IS
+      USUALLY NOT TO IMPROVE FORECASTING — IT IS TO TIGHTEN LEAD-TIME
+      VARIANCE WITH SUPPLIERS. THE MATH SAYS THE LEVERAGE IS THERE.
+
+
+Day 80 — Capstone · The Principal’s Synthesis (capstone)
+   dom: 12 (APPLIED)
+
+   f: Cross-Domain Integration · The Graduation Frame
+
+   o: Synthesis of Stanford OIT/MS&E canon
+
+   cite: Comprehensive curriculum integration.
+
+   sum: The graduation day. A reflection on how the 80 days fit together, what the canon
+   collectively teaches, and what the principal’s craft looks like in practice. Not a case — a
+   directed reflection with prompts and a final framework map.
+
+   dur: 15
+
+   cap: true
+
+   content:
+
+      lecture-style with checkpoints. The user is asked to recall, in succession:
+
+       1. Three frameworks they applied this past month.
+
+       2. The framework they most often forget to apply.
+
+       3. A decision they made before this program that, with hindsight, used the wrong
+             framework.
+
+       4. A future decision (named) where they’ll consciously apply at least three
+             frameworks.
+
+      The output is a “principal’s map” — a single screen showing the 18 domains and the
+      user’s ranked self-assessment of fluency in each.
+
+      fr: A STANFORD MS IN OPERATIONS DOES NOT MAKE YOU A PRINCIPAL. WHAT IT
+      DOES IS GIVE YOU FLUENCY IN THE CANON SO THAT WHEN A COMPLEX
+      DECISION ARRIVES, YOU REACH FOR THE RIGHT FRAMEWORK INSTEAD OF YOUR
+      INSTINCTS. SCFC HAS DELIVERED THE SAME FLUENCY IN 80 DAILY SESSIONS.
+      THE WORK FROM HERE — AND IT IS THE WORK THAT ACTUALLY MAKES A
+      PRINCIPAL — IS APPLYING THE FRAMEWORKS UNDER REAL CONSTRAINTS, WITH
+      REAL CONSEQUENCES, OVER MANY YEARS. THIS IS WHERE THE DEGREE ENDS
+       AND THE CRAFT BEGINS.
+
+
+
+
+4 · Glossary expansion
+Add 30 terms to the existing 50, for a total of 80. Render as before in 2-column grid.
+
+
+ const NEW_GLOSSARY_TERMS = [
+    // FOUNDATIONS / STRATEGY (extending)
+    ['TRIPLE-A',         'Hau Lee\'s framework: Agility, Adaptability, Alignment. Best supply cha
+    ['VALUE CAPTURE',    'Brandenburger-Stuart: the share of created value a firm appropriates. D
+    ['CAPABILITY',       'Pisano: a firm-specific bundle of routines and assets that competitors
+
+
+    // OR / NETWORKS (new domain)
+    ['p-MEDIAN',         'MILP formulation: choose p facilities from candidates to minimize weigh
+    ['p-CENTER',         'MILP variant: minimize the maximum distance any customer travels (vs p-
+    ['SET COVERING',     'Minimum number of facilities such that every demand point is within a r
+    ['MILP',             'Mixed-Integer Linear Programming. Workhorse of network design — combina
+    ['DUAL VARIABLE',    'In LP, the shadow price of a constraint. Reveals which constraints are
+    ['NP-HARD',          'Computational class. VRP, p-median, scheduling — all NP-hard. Practitio
+    ['SAVINGS ALGO',     'Clarke-Wright heuristic for VRP. Combines routes by selecting pairs tha
+    ['LITTLE\'S LAW',    'L = λ × W. Average inventory = throughput × time-in-system. Holds for a
+    ['M/M/1',            'Single-server queue with Poisson arrivals and exponential service. Foun
+    ['ERLANG C',         'Multi-server queueing formula for call center / dock staffing. Predicts
+
+
+    // SUSTAINABILITY (new domain)
+    ['SCOPE 1/2/3',      'GHG emissions accounting: 1=direct (boilers), 2=purchased energy, 3=val
+    ['CBAM',             'EU Carbon Border Adjustment Mechanism (2023). Prices imported carbon. R
+    ['EU ETS',           'EU Emissions Trading System. ~€80–100/tonne CO₂ as of 2026. Foundationa
+    ['SBTi',             'Science Based Targets initiative. Validates corporate emissions targets
+    ['CIRCULARITY',      'Designing supply chains for reuse, repair, remanufacturing. Ellen MacAr
+
+
+    // GEOPOLITICS (new domain)
+    ['FRIEND-SHORING', 'Yellen 2022. Relocating production to politically aligned countries. Tr
+    ['DECOUPLING',       'Reducing supply chain interdependence with geopolitical rival. US-China
+    ['CHIPS ACT',        '$200B+ US semiconductor industrial policy (2022). Largest peacetime ind
+    ['IRA',              'Inflation Reduction Act (2022). $370B for clean energy + EV batteries w
+    ['SECTION 301',      'US trade law authorizing tariffs on China. ~25% on most categories sinc
+
+
+    // HEALTHCARE / PHARMA (new domain)
+    ['DSCSA',            'Drug Supply Chain Security Act. Mandates unit-level serialization + ele
+    ['EPCIS',            'Electronic Product Code Information Services. The data exchange standar
+    ['COLD CHAIN',       'Temperature-controlled supply chain (typically 2–8°C for vaccines, ≤−15
+    ['FDA 483',          'FDA notice of objectionable conditions during inspection. Operations-st
+      // SEMICOND (new domain)
+      ['EUV',               'Extreme Ultraviolet Lithography. ASML monopoly. Gates ≤7nm semiconducto
+      ['FOUNDRY',           'Pure-play semiconductor manufacturer (TSMC, Samsung Foundry). Distinct
+      ['ALLOCATION',        'When fab capacity is constrained, the share each customer receives. A q
+
+
+      // BEHAVIOR (new domain)
+      ['BEER GAME',         'Sterman 1989 simulation showing bullwhip emerges even with rational pla
+      ['ANCHORING',         'Tversky-Kahneman 1974. First number framing dominates subsequent estima
+ ];
+
+
+Total glossary after merge: 80 terms.
+
+
+
+
+5 · Reading list expansion
+Add 18 entries. Schema unchanged from v2. The CANON tier is reserved for the most
+foundational works; CORE is strong supporting research. v3 adds a third tier — EMERGING
+— for post-2018 work where the canon hasn’t fully consolidated. EMERGING renders with a
+blue tier badge (color #7AB8E0 ).
+
+
+ const NEW_READING = [
+      // Triple-A & Stanford operations canon
+      ['CANON',       'Lee, H. L.',                 '"The Triple-A Supply Chain."',
+      ['CORE',        'Lee, H. L. & Tang, C. S.',   '"Socially and Environmentally Responsible Value
+      ['CANON',       'Brandenburger, A. M. & Stuart, H. W.', '"Value-based Business Strategy."',
+      ['CORE',        'Pisano, G. P.',              '"Toward a Prescriptive Theory of Dynamic Capabi
+
+
+      // OR / Networks
+      ['CANON',       'Daskin, M. S.',              'Network and Discrete Location: Models, Algorith
+      ['CORE',        'Toth, P. & Vigo, D.',        'Vehicle Routing: Problems, Methods, and Applica
+      ['CANON',       'Little, J. D. C.',           '"A Proof for the Queuing Formula: L = λW."',
+      ['CORE',        'Hopp, W. J. & Spearman, M. L.', 'Factory Physics',
+
+
+      // Sustainability
+      ['CANON',       'Plambeck, E. L.',            '"Reducing greenhouse gas emissions through oper
+      ['CORE',        'Lee, H. L., Plambeck, E. L. & Yatsko, P.', '"Embracing Green in China... with
+      ['CORE',        'WRI / WBCSD',                'Corporate Value Chain (Scope 3) Accounting and
+      ['EMERGING', 'European Commission',           'Carbon Border Adjustment Mechanism, Reg. (EU) 2
+
+
+      // Geopolitics
+      ['EMERGING', 'Witt, M. A. et al.',            '"Decoupling in international business."',
+      ['EMERGING', 'Allen, G. C. (CSIS)',           'Sourcing Requirements and U.S. Technological Co
+      ['CORE',        'Mazzucato, M.',              'The Entrepreneurial State',
+
+
+      // Healthcare
+      ['CORE',        'Scheinker, D. & Brandeau, M. L.', '"Healthcare operations management: A bridg
+      ['EMERGING', 'FDA',                            'Drug Supply Chain Security Act: Implementation
+
+
+      // Behavioral Operations
+      ['CANON',       'Sterman, J. D.',              '"Modeling Managerial Behavior: Misperceptions o
+      ['CANON',       'Croson, R. & Donohue, K.',    '"Behavioral Causes of the Bullwhip Effect."',
+      ['CORE',        'Gino, F. & Pisano, G.',       '"Toward a Theory of Behavioral Operations."',
+      ['CORE',        'Galinsky, A. D. & Mussweiler, T.', '"First Offers as Anchors."',
+ ];
+
+
+Total reading list after merge: 40+ entries. Re-sort by day in the Reading view.
+
+
+5.1 Tier badge styling
+Add EMERGING tier:
+
+
+ .read-row .tier.emerging {
+      color: #7AB8E0;
+      border-color: rgba(122,184,224,0.5);
+ }
+
+
+
+
+6 · Schema additions
+
+6.1 Day type
+Extend the existing schema. Existing days continue to work without modification (new fields
+are optional).
+
+ type Day = {
+      d: number;
+      w: number;                // week number (1..16 for v3 — see §6.4)
+      dom: number;              // 1..18
+      t: string;
+      f: string;
+      o: string;
+      cite: string;
+      sum: string;
+      scn: Scenario | null;
+      // NEW IN V3
+      dur?: number;             // estimated duration in minutes (default 5; capstones 15–20)
+      cap?: boolean;            // capstone flag — renders gold border, "CAPSTONE" badge
+      deriv?: Derivation;       // optional full derivation panel (capstone-only typically)
+ };
+ type Derivation = {
+      // Renders in a new panel below the quant panel
+      steps: Array<{
+        n: string;              // step number (e.g., '1', '2.a')
+        title: string;          // step title (e.g., 'First-order condition')
+        body: string;           // markdown-allowed body (line breaks preserved)
+        math?: string;          // optional formula block (rendered as IBM Plex Serif italic)
+      }>;
+ };
+
+
+
+6.2 Reading entry
+
+ type ReadingEntry = [
+      tier: 'CANON' | 'CORE' | 'EMERGING',     // EMERGING is new
+      author: string,
+      work: string,
+      publisher: string,
+      topic: string,
+      day: number,
+      // NEW IN V3 (optional, additive)
+      tag?: string     // e.g. 'derivation', 'case-study', 'survey' — surfaces in palette filtering
+ ];
+
+
+
+6.3 Derivation panel rendering
+CSS for the new derivation panel:
+
+ .deriv {
+      margin-top: 14px; padding: 14px;
+      border: 1px solid rgba(255,192,128,0.55);
+      background: rgba(255,192,128,0.04);
+      position: relative; z-index: 3;
+ }
+ .deriv .dh {
+      font-family: 'Major Mono Display'; font-size: 9px;
+      letter-spacing: 0.24em; color: #FFC080;
+      margin-bottom: 8px;
+      display: flex; align-items: center; gap: 8px;
+ }
+ .deriv .dh::before {
+      content: '∫'; font-family: 'IBM Plex Serif';
+      font-size: 14px; font-style: italic;
+ }
+ .deriv .step {
+     margin-bottom: 12px; padding-bottom: 10px;
+     border-bottom: 1px dashed rgba(255,192,128,0.2);
+ }
+ .deriv .step:last-child { border-bottom: none; }
+ .deriv .step .sn {
+     font-family: 'Major Mono Display'; font-size: 10px;
+     color: #FFC080; letter-spacing: 0.18em;
+     margin-bottom: 4px;
+ }
+ .deriv .step .stitle {
+     font-family: 'IBM Plex Serif'; font-size: 14px;
+     color: #C8F0A0; font-weight: 500;
+     margin-bottom: 6px;
+ }
+ .deriv .step .sbody {
+     font-family: 'IBM Plex Mono'; font-size: 12px;
+     line-height: 1.55; color: rgba(184,224,144,0.9);
+     margin-bottom: 6px;
+ }
+ .deriv .step .smath {
+     font-family: 'IBM Plex Mono'; font-size: 12.5px;
+     color: #C8F0A0; padding: 8px 10px;
+     background: rgba(0,0,0,0.25);
+     border-left: 2px solid #FFC080;
+     white-space: pre-wrap; line-height: 1.5;
+     margin: 6px 0;
+ }
+
+
+Render derivation panels after the quant panel (if both exist). Typewriter effect does not
+apply to derivations — they render statically once the brief is complete. This is a deliberate
+design choice: derivations are reference material, not theater.
+
+
+6.4 Week numbers
+v3 adds 4 weeks (Foundation 60 keeps weeks 1–12; Mastery +20 spans weeks 13–16).
+
+
+ WEEK 13 — NETWORKS + ADVANCED INVENTORY
+     Day 61 — Triple-A Supply Chain (case)
+     Day 62 — Newsvendor Derivation (capstone)
+     Day 63 — Network Optimization Intuition (case)
+     Day 64 — Vehicle Routing Problem (lecture)
+     Day 65 — Queueing Intuition · Little's Law (lecture)
+
+
+ WEEK 14 — SUSTAINABILITY + GEOPOLITICS
+     Day 66 — Queueing Capstone (capstone)
+     Day 67 — Sustainability & Operations (case)
+     Day 68 — Carbon Pricing & Cap-and-Trade (lecture)
+     Day 69 — Sustainability Capstone · Carbon Math (capstone)
+     Day 70 — Geopolitical Supply Chain (case)
+
+
+ WEEK 15 — HEALTHCARE + SEMICONDUCTORS
+     Day 71 — CHIPS Act & Industrial Policy (lecture)
+     Day 72 — Healthcare Supply Chain (case)
+     Day 73 — DSCSA & Pharma Compliance (lecture)
+     Day 74 — Semiconductor Supply Chain (case)
+     Day 75 — Lithography Monopoly · ASML (lecture)
+
+
+ WEEK 16 — BEHAVIORAL + CAPSTONE INTEGRATION
+     Day 76 — Behavioral Operations (case)
+     Day 77 — Anchoring & Negotiation (lecture)
+     Day 78 — Capstone · Multi-Domain Synthesis (capstone)
+     Day 79 — Stochastic Inventory Capstone (capstone)
+     Day 80 — Capstone · The Principal's Synthesis (capstone)
+
+
+
+
+7 · UI additions
+
+7.1 Capstone day badge
+A capstone day card in the curriculum grid gets a gold accent border and a small CAPSTONE
+ribbon in the top-right.
+
+
+ .curr-day.capstone {
+     border-color: rgba(255,192,128,0.7);
+     background: rgba(255,192,128,0.06);
+     position: relative;
+ }
+ .curr-day.capstone::after {
+     content: 'CAPSTONE';
+     position: absolute; top: -1px; right: -1px;
+     background: #FFC080; color: #1A1814;
+     font-family: 'IBM Plex Mono'; font-size: 7px;
+     letter-spacing: 0.2em; padding: 2px 5px;
+     border-radius: 0 0 0 3px;
+ }
+ .curr-day.capstone .dnum::after { content: ' ⊕'; color: #FFC080; }
+
+
+
+7.2 Duration display
+On the home view for a capstone day, show duration prominently:
+ DAY 66 / 80 · CAPSTONE · ~18 min
+
+
+Standard days continue to show only the day number (5-min sessions are the default and
+don’t need a duration call-out).
+
+
+7.3 Tier toggle in nameplate
+Add a small toggle in the nameplate area indicating which program tier the user is in:
+
+
+ [FOUND·60]    [MAST·+20]
+
+
+   Foundation 60 is always available.
+
+   Mastery +20 is locked until day 60 is complete; lock state shows a small       (no emoji
+   — use Unicode character ▦ ) and a tooltip “Complete Foundation 60 to unlock.”
+
+Toggling between tiers does not change state.currentDay ; it filters the curriculum view.
+The “Today” view always loads state.currentDay , regardless of tier toggle.
+
+
+7.4 Mastery completion celebration
+When the user completes day 80, render a brief LCD sequence:
+
+
+ // program complete.
+ //
+ // ─────────────────────────────────
+ //
+ // 80 days · 18 domains · 30 frameworks
+ // 14 cases · 8 capstones · 80 glossary terms
+ // 40+ canonical citations
+ //
+ // you have completed the foundation
+ // of a supply chain masters fluency.
+ //
+ // the work from here is application.
+ //
+ // ─────────────────────────────────
+
+
+Then show the principal’s map (§3, Day 80 deliverable) and the user’s domain strength bars
+at maximum visualization.
+
+
+
+
+8 · Migration from v2
+On first load with v3 code, look for the existing v2 key and migrate.
+
+
+ function migrateFromV2() {
+     const v2raw = localStorage.getItem('scfc-masters-v2');
+     if (!v2raw) return null;
+     try {
+         const v2 = JSON.parse(v2raw);
+         return {
+              version: 3,
+              streak: v2.streak || 0,
+              currentDay: v2.currentDay || 1,
+              lastCompletedDate: v2.lastCompletedDate || null,
+              completions: v2.completions || [],
+              domains: {
+                   ...v2.domains,
+                   // Initialize new domains (13–18) at strength 0
+                   13: { strength: 0 },
+                   14: { strength: 0 },
+                   15: { strength: 0 },
+                   16: { strength: 0 },
+                   17: { strength: 0 },
+                   18: { strength: 0 }
+              },
+              tier: (v2.currentDay || 1) > 60 ? 'mastery' : 'foundation'
+         };
+     } catch (e) { return null; }
+ }
+
+
+ function loadState() {
+     // v3 first
+     const v3raw = localStorage.getItem('scfc-masters-v3');
+     if (v3raw) {
+         try { return Object.assign(defaultState(), JSON.parse(v3raw)); }
+         catch (e) { /* fall through */ }
+     }
+     // try v2 migration
+     const migrated = migrateFromV2();
+     if (migrated) {
+         localStorage.setItem('scfc-masters-v3', JSON.stringify(migrated));
+         // optionally remove v2 key after successful migration:
+         // localStorage.removeItem('scfc-masters-v2');
+         return migrated;
+     }
+     return defaultState();
+ }
+ function defaultState() {
+     return {
+          version: 3,
+          streak: 0,
+          currentDay: 1,
+          lastCompletedDate: null,
+          completions: [],
+          domains: Object.fromEntries(DOMAINS.map(d => [d.n, { strength: 0 }])),
+          tier: 'foundation'
+     };
+ }
+
+
+The v2 key is not deleted after migration unless the user opts in via a palette command.
+This is conservative — if migration fails downstream, the v2 data is recoverable.
+
+
+
+
+9 · Acceptance checklist (v3-specific additions)
+Add to v2 checklist:
+
+
+9.1 Domain expansion
+     VU meter renders 18 rows.
+
+     Mobile: VU meters scroll vertically without breaking layout.
+
+     Domain names 13–18 render correctly in the curriculum grid week labels.
+
+
+9.2 Curriculum
+     All 80 days reachable from the curriculum grid (with tier toggle to Mastery).
+
+     Day 60 completion unlocks Mastery tier toggle.
+
+     Capstone days render with gold ribbon and accent border.
+
+     Day 60 vs Day 80 progress display correctly per tier.
+
+
+9.3 Capstone days
+     All 8 capstone days (62, 66, 69, 78, 79, 80, plus the v2 cases reclassified if any) display
+     the duration call-out.
+
+     Derivation panels render for days that have them (62, 66, 69, 79).
+
+     Derivations are static (no typewriter).
+   Math blocks use monospace and the gold left-border style.
+
+
+9.4 Glossary
+   All 80 terms render in the glossary view.
+
+   New terms are searchable in the palette.
+
+
+9.5 Reading list
+   All 40+ entries render.
+
+   EMERGING tier renders in blue (#7AB8E0).
+
+   Reading list re-sorts by day with new entries integrated.
+
+
+9.6 Migration
+   User with v2 state loads into v3 with progress preserved.
+
+   User with no prior state loads day 1 in foundation tier.
+
+   Streak, completions, domain strengths from v2 are intact post-migration.
+
+   New domain strengths (13–18) initialize at 0.
+
+
+9.7 Day 80 completion
+   Day 80 completion triggers the program-complete LCD sequence.
+
+   Principal’s map renders.
+
+   No subsequent days unlock (program is complete; replays are accessible from
+   curriculum).
+
+
+
+
+10 · Out of scope (still — for v3)
+The v2 list still applies. Additional v3 non-goals:
+
+   Live data integration (e.g., real diesel prices, real CBAM credit prices). Scenarios use
+   authored numbers; updating them is a v4 concern.
+
+   Adaptive difficulty. All 80 days are linear and authored. No spaced retrieval, no skill-
+   gap detection, no personalized ordering.
+
+   Multi-language. English only.
+    Group mode / leaderboard. Single user, no comparison features.
+
+    Certificate / badge generation. The product respects the user’s privacy and doesn’t
+    generate shareable artifacts.
+
+
+
+
+11 · Definition of done — v3
+The v3 build is complete when:
+
+1. All v2 acceptance criteria still pass.
+
+2. Every item in §9 above passes.
+
+3. A user with existing v2 progress can launch v3 and find their state intact.
+
+4. A new user can complete days 1–80 in sequence without encountering a broken state.
+
+5. The reference Stanford alignment is defensible: every new domain has a citation linking
+    it to either an MS&E or OIT course or a faculty body of work, and the canonical literature
+    for each domain is referenced verbatim.
+
+6. A senior procurement leader (Kyle profile) can finish all 80 days in 8–12 weeks with daily
+    5-minute sessions and 8 longer (15–20 min) capstone sessions, and emerge with
+    defensible fluency in the supply chain canon at Stanford MS level.
+
+That is the bar. Build to it.
+

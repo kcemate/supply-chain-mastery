@@ -1,0 +1,16 @@
+{
+  "name": "scfc-progress-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check scripts/apply-schema.js",
+    "apply-schema": "node scripts/apply-schema.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "jose": "^5.6.3",
+    "pg": "^8.12.0"
+  }
+}

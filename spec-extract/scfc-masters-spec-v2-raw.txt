@@ -1,0 +1,3632 @@
+SCFC · Masters Program — Build Specification
+Document type: Build spec for an autonomous coding agent. Target output: A single
+working HTML file (or split into index.html + app.css + app.js + data.js if you
+prefer; both are acceptable). No build step required. No framework. Vanilla
+HTML/CSS/JS. No backend. All persistence via localStorage . Reference
+implementation: scfc-masters.html exists and works; this spec describes intent and
+exact contents so it can be re-built or extended without ambiguity.
+
+0 · How to read this spec
+This document is the source of truth. Where it conflicts with anything else, this document
+wins.
+§1–§4 describe what the product is and how it behaves.
+§5 is the design system. Implement these tokens exactly.
+§6 is the data layer — all 60 curriculum days, all 50 glossary terms, all canonical
+reading. Treat this as input data; serialize it however you want (JS object, JSON file,
+embedded <script> constant). Do not paraphrase, abbreviate, or “improve” the
+content. The framings are written deliberately.
+§7–§9 describe individual UI components, their exact CSS, and how they animate.
+§10 is the state machine. Implement it as a finite-state machine, not as a tangle of
+conditionals.
+§11 is the persistence schema.
+§12 is keyboard, palette, and accessibility.
+§13 is the acceptance checklist. The build is not done until every item passes.
+When a section says “exact” or “verbatim,” it means exact. When it says “approximate” or
+“≈,” judgment is acceptable.
+
+1 · Product overview
+
+1.1 What it is
+SCFC (Supply Chain Fluency Coach) is a single-user, single-page, locally-persistent web
+app that delivers a 60-day supply chain masters program through daily ~5-minute training
+sessions.
+The aesthetic is the Machine — a Teenage-Engineering / Dieter-Rams-styled instrument
+panel with a green phosphor LCD, mechanical channel buttons, VU meters, and a single
+primary action button. Every screen renders inside this panel. There is no “navigation” in the
+conventional web sense; views switch by pressing mode buttons on the panel.
+
+1.2 Why it exists
+The user is a senior product/sourcing leader pursuing principal-level fluency in supply chain.
+Existing learning products are either:
+Aggregator content (LinkedIn Learning, Coursera) — broad, shallow, no decision
+practice.
+Academic textbooks — comprehensive but not actionable in 5-minute increments.
+AI chat tutors — non-deterministic, no curriculum, no progression.
+SCFC fills the gap: a deterministic curriculum that names the framework, attributes the
+originator, cites the canonical paper, and forces a decision daily. After 8–12 weeks of
+disciplined daily use, a working principal should be conversant in the supply chain canon at
+a Stanford MS level.
+
+1.3 Hard constraints
+No backend. Everything runs client-side. Data lives in localStorage .
+No login. No accounts. No auth.
+No telemetry. No analytics. No third-party calls except Google Fonts (CSS-level only).
+Works offline after first load (Google Fonts will degrade gracefully — system fonts must
+look acceptable).
+One file is acceptable. A split into index.html / app.css / app.js / data.js is also
+acceptable. Either way, it deploys as static files. No build step.
+Mobile-responsive — the panel must be readable and usable on a 375px-wide phone
+screen. The user is often mobile.
+
+1.4 Non-goals
+
+Multi-user. There is one user per browser. That’s it.
+Cloud sync.
+Social features.
+Adaptive AI tutoring.
+Generating content at runtime. All scenarios are authored.
+
+2 · Information architecture
+2.1 Views
+The app has five top-level views, switched by buttons on the mode row:
+Code
+
+Mode button label
+
+Key
+
+Purpose
+
+home
+
+Today
+
+H
+
+The current day’s lecture or case
+
+curr
+
+Curr
+
+C
+
+The 60-day grid · jump to any day
+
+glos
+
+Gloss
+
+G
+
+The glossary of ~50 canonical terms
+
+read
+
+Read
+
+R
+
+The reading list (CANON / CORE tiered)
+
+palette
+
+Cmd
+
+⌘K
+
+Command palette overlay
+
+Within home , sub-states drive the scenario flow: briefing → decision → outcome →
+debrief .
+
+2.2 No routing
+There is no URL routing. Views are switched via JavaScript only. Reloading the page
+returns to home with current persisted state. Deep linking is out of scope.
+
+2.3 The “Today” model
+state.currentDay is a 1–60 integer. It does not auto-advance based on calendar date. It
+
+advances when:
+The user completes today’s case (any verdict).
+The user marks a lecture day complete.
+
+This means a user who skips three days returns to find the same currentDay waiting. This
+is intentional. The product respects the user’s actual progression, not their calendar.
+The streak logic is separate from currentDay and is calendar-based (see §11.3).
+
+2.4 Day types
+Each curriculum day is one of two types:
+Lecture — framework + originator + citation + summary, no decision. The user reads,
+optionally pulls up the relevant reading list entry, then taps “Mark Lecture Complete.”
+Gives ½ point of domain strength.
+Case — full scenario with brief, optional quantitative panel, 1–2 decisions with 2–3
+options each, outcome, debrief, principal framing. Gives 0–1 point of domain strength
+based on accuracy.
+12 of 60 days are cases (specified in §6). 48 are lectures.
+
+3 · State machine
+Implement this as an explicit FSM. Do not use ad-hoc booleans.
+┌──────────────────────────┐
+│
+
+│
+
+▼
+
+│
+
+[BOOT]
+
+│
+
+│
+
+│
+
+▼
+
+│
+
+[HOME]◄───────────────┐
+
+│
+
+╱
+
+│
+
+╲
+
+│
+
+│
+
+╱
+
+│
+
+╲
+
+│
+
+│
+
+▼
+
+▼
+
+│
+
+│
+
+[READ]
+
+│
+
+│
+
+▼
+[CURR]
+
+[GLOS]
+
+╲
+
+│
+
+╱
+
+│
+
+│
+
+╲
+
+│
+
+╱
+
+│
+
+│
+
+▼
+
+▼
+
+▼
+
+│
+
+│
+
+(mode buttons return)
+
+│
+
+│
+
+│
+
+│
+
+from HOME if today.scn:
+
+│
+
+│
+
+│
+
+│
+
+│
+
+▼
+
+│
+
+│
+
+[BRIEFING] ─── skip ──────▶ │
+
+│
+
+│
+
+│
+
+│
+
+▼
+[DECISION n] ◄──────┐
+
+│
+
+│
+
+│
+
+│
+
+│
+
+│
+
+│
+
+│
+
+▼
+
+│
+
+│
+
+│
+
+[OUTCOME n] ─────────┘
+
+│
+
+│
+
+│
+
+│
+
+│
+
+│
+
+[DEBRIEF] ───────────────────┘
+
+│
+
+│
+
+(if next exists)
+
+▼
+│
+
+│
+
+└───────────────────────────────┘
+eject
+from HOME if today.lecture:
+│
+▼
+[LECTURE_REVIEW]
+│
+▼ (mark complete)
+advance currentDay → HOME
+
+3.1 State definitions
+State
+
+Entry
+
+Exit
+
+BOOT
+
+App load
+
+Always → HOME
+
+HOME
+
+Mode = today
+
+Mode buttons / engage button
+
+Mode buttons
+
+Mode buttons
+
+CURR / GLOS /
+READ
+
+PALETTE
+
+BRIEFING
+
+DECISION n
+
+⌘K or palette mode
+
+button
+Engage from HOME (case
+day)
+Continue from BRIEFING
+or OUTCOME n-1
+
+OUTCOME n
+
+Channel commit
+
+DEBRIEF
+
+After last outcome
+
+Esc / item-pick (returns to prior view)
+
+Continue → DECISION 0
+
+Channel-button press → OUTCOME n
+Continue → DECISION n+1 if option has
+.n field, else → DEBRIEF
+
+Eject → HOME (currentDay advances)
+
+LECTURE_REVIEW
+
+Engage from HOME
+
+Mark complete → HOME (currentDay
+
+(lecture day)
+
+advances)
+
+3.2 Branching within scenarios
+Each decision option may declare .n: <int> (a 0-indexed pointer to the next decision).
+Options without .n end the scenario and route to debrief. This allows scenarios to have
+early-exit branches. (Example: in the chicken case, accepting the increase ends the
+scenario; locking the forward goes to a second decision about communication.)
+Decisions are an array. The default progression is sequential ( n=current+1 ), but options
+can fork or terminate.
+
+4 · Layout
+The entire app lives inside one panel called .machine , with this vertical stack:
+┌─────────────────────────────────────────────┐
+│ ▣
+
+▣ │
+
+NAMEPLATE
+
+├─────────────────────────────────────────────┤
+│ [Today] [Curr] [Gloss] [Read] [⌘K]
+
+│
+
+├─────────────────────────────────────────────┤
+│
+
+│
+
+│
+
+LCD (green phosphor)
+
+│
+
+│
+│
+
+├─────────────────────────────────────────────┤
+│ CHANNELS
+
+│
+
+│ 01
+
+│
+
+│ 02
+
+│
+
+│ 03
+
+│
+
+STREAK + DAY PROGRESS
+
+│
+│
+
+DOMAINS / VU
+
+│
+│
+
+├─────────────────────────────────────────────┤
+│
+
+[PRIMARY ACTION BUTTON]
+
+│
+
+├─────────────────────────────────────────────┤
+│ ▣
+
+FOOTER PLATE
+
+▣ │
+
+└─────────────────────────────────────────────┘
+▣ = corner screws
+
+The .machine container is centered, max-width 980px , with the dark room/grain backdrop
+behind it.
+Mobile (<720px): the controls row stacks vertically (channels above side-controls), the
+mode-row collapses to 3 columns, font sizes reduce per breakpoints in §5.
+
+5 · Design system
+5.1 Color tokens
+Token
+
+Hex
+
+Use
+
+--bg-room
+
+#0A0A0C
+
+Page background base
+
+--bg-room-glow
+
+#1A1A1F
+
+Page background top vignette
+
+--panel-light
+
+#D4CCB6
+
+Panel top gradient
+
+--panel-mid
+
+#BFB6A0
+
+Panel mid gradient
+
+--panel-dark
+
+#B0A892
+
+Panel bottom gradient / control wells
+
+--ink
+
+#1A1814
+
+Primary text on panel
+
+--ink-dim
+
+#5C5446
+
+Secondary text on panel
+
+--lcd-bg
+
+#0E1F0C
+
+LCD background
+
+--lcd-fg
+
+#B8E090
+
+LCD primary phosphor
+
+--lcd-fg-bright
+
+#C8F0A0
+
+LCD bright/title phosphor
+
+--lcd-amber
+
+#FFC080
+
+LCD amber accent (data, callouts)
+
+--lcd-red
+
+#FF7A5C
+
+LCD bad-verdict red
+
+--lcd-dim
+
+rgba(184,224,144,0.55)
+
+LCD dim text
+
+--led-green
+
+#5FB97D
+
+Power LED, good verdict
+
+--led-amber
+
+#E8A341
+
+Unit LED, channel armed
+
+--led-red
+
+#C8442A
+
+Arm LED, fault
+
+--accent-red
+
+#C8442A
+
+Active mode color, picked channel
+
+--btn-red
+
+#D43E1E
+
+Primary button (engage)
+
+--btn-red-deep
+
+#A02612
+
+Primary button shadow
+
+--btn-red-base
+
+#5C1A0E
+
+Primary button mechanical depth
+
+5.2 Typography
+Three faces. No others. Pre-load via Google Fonts.
+
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&f
+
+Face
+
+Use
+
+IBM Plex Mono
+
+Body, all UI chrome, channel labels, footer, LCD lines
+
+Major Mono Display
+
+Titles, nameplate, streak number, big numerals
+
+IBM Plex Serif
+
+Quantitative formulas, framework names in didactic blocks
+
+5.3 Type scale
+Letter-
+
+Use
+
+Family
+
+Size
+
+Weight
+
+Nameplate brand
+
+Major Mono
+
+22px
+
+400
+
+0.04em
+
+Nameplate small
+
+Plex Mono
+
+9px
+
+400
+
+0.28em
+
+LCD title
+
+Major Mono
+
+400
+
+0.005em
+
+LCD body
+
+Plex Mono
+
+13.5px
+
+400
+
+normal
+
+Major Mono
+
+11px
+
+400
+
+0.18em
+
+LCD context table
+
+Plex Mono
+
+12px
+
+400/500
+
+normal
+
+Mode button
+
+Plex Mono
+
+10px
+
+500
+
+0.18em
+
+Channel label
+
+Plex Mono
+
+11px
+
+400
+
+normal
+
+Channel num
+
+Major Mono
+
+14px
+
+400
+
+normal
+
+Streak display
+
+Major Mono
+
+36px
+
+400
+
+0.06em
+
+VU name
+
+Plex Mono
+
+9px
+
+400
+
+0.14em
+
+Primary button
+
+Major Mono
+
+18px
+
+400
+
+0.22em
+
+LCD header
+(mode)
+
+clamp(20px, 3.6vw,
+28px)
+
+spacing
+
+Footer plate
+Quant formula
+
+Plex Mono
+Plex Serif
+italic
+
+9px
+
+400
+
+0.22em
+
+18px
+
+400
+
+0.01em
+
+18px
+
+400
+
+normal
+
+13px
+
+400
+
+normal
+
+Framework name
+
+Plex Serif
+
+Framework
+
+Plex Serif
+
+originator
+
+italic
+
+Glossary term
+
+Plex Mono
+
+11px
+
+600
+
+0.05em
+
+Reading citation
+
+Plex Serif
+
+13px
+
+400
+
+normal
+
+All letter-spacing values are CSS letter-spacing: <em>; . Body line-heights default to
+1.65 in the LCD; 1.45 in glossary; 1.4–1.55 in framework cards.
+
+5.4 Spacing
+Use a 4px base scale (4 / 6 / 8 / 10 / 12 / 14 / 18 / 22 / 24 / 32 / 48 / 64 / 80). The .machine
+container has padding: 24px (18px on mobile). Internal blocks use 12–18px margins.
+
+5.5 Borders, radii, shadows
+Panel radius: 10px .
+Internal control radius: 6px (channel wells, LCD, side blocks).
+Button radius: 4px (mode buttons, channel buttons).
+Panel shadow: inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -1px 0
+rgba(0,0,0,0.18), 0 30px 60px rgba(0,0,0,0.5) plus internal stroke.
+
+Mode/channel button shadow: inset 0 1px 0 rgba(255,255,255,0.6), inset 0 -2px
+0 rgba(0,0,0,0.22), 0 1px 2px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.12) .
+
+Primary button shadow: see §7.7 — uses 6px-deep mechanical extrusion that reduces
+to 2px on :active .
+
+5.6 Background textures
+Two SVG textures, embedded as data URIs:
+Hairline ridges (panel surface, every 2px horizontal line at 6% opacity):
+data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='2'>
+
+<line x1='0' y1='1' x2='160' y2='1' stroke='%23000' stroke-width='0.4' opacity='0.06'/>
+</svg>
+
+Noise grain (multiplicative overlay on panel and palette):
+data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'>
+<filter id='n'><feTurbulence baseFrequency='0.95' numOctaves='2'/></filter>
+<rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.6'/>
+</svg>
+
+5.7 Motion / timing
+Motion
+
+Duration
+
+Easing
+
+Mode button press
+
+80ms
+
+linear
+
+2.4s
+
+ease-in-out infinite
+
+LED red pulse
+
+1.6s
+
+ease-in-out infinite
+
+LCD flicker
+
+3.7s
+
+ease-in-out infinite (subtle, see §7.3)
+
+Cursor blink
+
+1.05s
+
+steps(2) infinite
+
+LCD typewriter
+
+10–18ms (jitter
+
+character
+
++random·8ms)
+
+VU cell flash
+
+800ms
+
+Mode/view switch
+
+instant
+
+Channel button arm
+pulse
+
+6 · Data layer
+6.1 Domains
+Twelve domains. One per week.
+const DOMAINS = [
+{ n: 1,
+
+name: 'FOUNDATIONS' },
+
+linear
+ease-out (one-shot, staggered 50ms
+per cell)
+(no transition; the LCD redraw is the
+feedback)
+
+{ n: 2,
+
+name: 'DEMAND'
+
+},
+
+{ n: 3,
+
+name: 'INVENTORY'
+
+},
+
+{ n: 4,
+
+name: 'SOURCING'
+
+},
+
+{ n: 5,
+
+name: 'CONTRACTS'
+
+},
+
+{ n: 6,
+
+name: 'SUPPLIERS'
+
+},
+
+{ n: 7,
+
+name: 'LOGISTICS'
+
+},
+
+{ n: 8,
+
+name: 'COMMODITY'
+
+},
+
+{ n: 9,
+
+name: 'RISK'
+
+},
+
+{ n: 10, name: 'ANALYTICS'
+
+},
+
+{ n: 11, name: 'STRATEGY'
+
+},
+
+{ n: 12, name: 'APPLIED'
+
+}
+
+];
+
+Domain names display as the leftmost 5 characters in the VU meter rows (e.g., FOUND ,
+DEMAN , INVEN ).
+
+6.2 Curriculum schema
+type Day = {
+d: number;
+
+// 1..60, day number
+
+w: number;
+
+// 1..12, week number
+
+dom: number;
+
+// 1..12, domain number
+
+t: string;
+
+// SHORT TITLE (uppercase, line-broken with \n if needed)
+
+f: string;
+
+// Framework name
+
+o: string;
+
+// Originator(s) with year
+
+cite: string;
+
+// Full citation
+
+sum: string;
+
+// 1–2 sentence summary
+
+scn: Scenario | null; // If null, this is a lecture day
+};
+type Scenario = {
+tp: string;
+
+// Title plain (sentence case, with em-dash subtitle)
+
+pre: string;
+
+// 1–2 sentence preface read aloud before brief
+
+sl: Array<[string, string?]>; // Setup lines: [text, optionalCssClass]
+ctx: Array<[string, string]>; // Context table rows: [label, value]
+qt?: {
+f: string;
+
+// Optional quantitative panel
+// Formula in plain text
+
+v: Array<[string, string, string]>; // [variable, description, value]
+r: string;
+
+// Result line
+
+};
+dec: Array<{
+
+// 1–2 decision steps
+
+p: string;
+
+// Prompt e.g. 'DECISION 01 / 02'
+
+q: string;
+
+// Question e.g. 'FIRST MOVE.'
+
+o: Array<{
+
+// 2–3 options
+
+l: string;
+
+// Label (uppercase)
+
+v: 'good'|'warn'|'bad';
+
+s: number;
+
+// -2..+2 score
+
+c: string;
+
+// Consequence narration (lowercase)
+
+n?: number;
+
+// If present, next decision index; else terminate
+
+}>;
+}>;
+opt: number[];
+
+// Optimal pick index per decision (for accuracy %)
+
+fr: string;
+
+// PRINCIPAL FRAMING (uppercase, multi-sentence)
+
+};
+
+6.3 The full curriculum
+Verbatim. Do not edit. The framings are written deliberately.
+Author guidance for the agent:
+Lecture days have scn: null . They render the framework card and a “Mark Lecture
+Complete” button.
+Cases must render: title → brief preface → setup lines (typewriter) → context table →
+optional quant panel → CONTINUE → decision → channel commit → outcome → (next
+decision or debrief).
+In all narration c , pre , framing fr : keep the case in the data exactly as given.
+Lowercase consequences, uppercase framings, uppercase setup line text only where
+marked.
+WEEK 1 · FOUNDATIONS
+Day 1 — TOTAL LANDED COST
+f: TCO Framework
+o: Ellram (1995)
+cite: Ellram, L. M. “Total cost of ownership: an analysis approach for purchasing.”
+IJPDLM, 1995.
+sum: Unit price is rarely the right number. TCO accounts for the full lifecycle: acquisition,
+possession, transformation, disposal.
+Case (full scenario): The Shell-Egg Walkthrough
+tp: Total Landed Cost · The Shell-Egg Walkthrough
+pre: A finance peer asks you to walk them through unit cost on a 30-doz case of
+shell eggs. They have seen “$32.40” and want the stack.
+
+setup lines:
+// initiating: TCO walkthrough [dim]
+
+blank
+// reference: $32.40 / case (30 doz).
+// stack:
+// feed 60% ($19.44)
+// labor 14% ($4.54)
+// packaging 08% ($2.59)
+// transport 11% ($3.56)
+// distrib. 07% ($2.27)
+
+blank
+// peer wants the structure. you have 5 min.
+
+context: CASE PRICE=$32.40 · FEED COMP=60% · WINDOW=5 min ·
+AUDIENCE=finance peer
+decisions:
+D1 “HOW DO YOU WALK IT.”:
+good +2 “BUILD UP / FEED FIRST / TEACH STRUCTURE” → “you taught the
+stack. peer can defend the number with their CFO. compound benefit —
+every future finance conversation about this category starts in the right
+place.”
+warn 0 “TOP-DOWN / CASE → DISTRIB → INPUT” → “they got the answer.
+they did not get the leverage points. they will ask again next month.”
+bad −2 “SEND THE SPREADSHEET” → “you saved 5 minutes. someone else
+will spend 30 next week correcting their misuse of the number in a meeting.”
+optimal: [0]
+fr: TCO IS A TEACHING FRAMEWORK BEFORE IT IS AN ACCOUNTING ONE. THE
+PRINCIPAL TEACHES THE STRUCTURE — INPUT COST, CONVERSION, LOGISTICS,
+MARGIN — BECAUSE STRUCTURE COMPOUNDS WHILE NUMBERS DECAY. ELLRAM
+(1995) FORMALIZED IT; EVERY QBR SINCE HAS BEEN A SLOPPY IMITATION.
+
+Day 2 — SUPPLY CHAIN MAPPING (lecture)
+f: Tier-N Visibility
+o: Choi & Linton (HBR 2011)
+cite: Choi, T. Y. & Linton, T. “Don’t Let Your Supply Chain Control Your Business.” HBR,
+Dec 2011.
+sum: Most firms know Tier-1. Strategic risk lives at Tier-2 and below. Mapping the
+network is the precondition to managing it.
+Day 3 — PUSH vs PULL · DECOUPLING (lecture)
+f: Customer Order Decoupling Point
+o: Olhager (2003)
+cite: Olhager, J. “Strategic positioning of the order penetration point.” IJPE 85(3), 2003.
+sum: Where you commit to specific demand defines your operating model. MTS, MTO,
+ATO, ETO are decoupling-point choices.
+Day 4 — PARETO / ABC (lecture)
+f: ABC Analysis · 80/20
+o: Pareto (1896); Silver, Pyke & Peterson
+cite: Silver, E. A., Pyke, D. F. & Peterson, R. “Inventory Management.” Wiley, 1998.
+sum: Not every SKU deserves equal attention. ABC concentrates analytical effort where
+the dollars actually live.
+Day 5 — EFFICIENT FRONTIER (lecture)
+f: Service-Cost Trade-off
+o: Fisher (HBR 1997)
+cite: Fisher, M. L. “What Is the Right Supply Chain for Your Product?” HBR, Mar–Apr
+1997.
+sum: Functional vs innovative products require different chains. The frontier separates
+the lazy from the optimal.
+WEEK 2 · DEMAND
+Day 6 — FORECAST ERROR · MAD/RMSE/MAPE (lecture)
+
+f: Forecast Accuracy Metrics
+o: Hyndman & Koehler (2006)
+cite: Hyndman, R. J. & Koehler, A. B. “Another look at measures of forecast accuracy.”
+IJF 22, 2006.
+sum: Your forecast accuracy metric is a policy choice. MAPE punishes small
+denominators; MASE doesn’t. Pick on purpose.
+Day 7 — THE BULLWHIP EFFECT
+f: Bullwhip · 4 Causes
+o: Lee, Padmanabhan & Whang (1997)
+cite: Lee, H. L., Padmanabhan, V. & Whang, S. “Information Distortion in a Supply Chain:
+The Bullwhip Effect.” Mgmt Sci 43(4), 1997.
+sum: Demand variance amplifies upstream. Four causes: signal-processing, rationing,
+batching, price fluctuation.
+Case: Why Q3 Looks Worse Upstream
+pre: A 3% real demand uptick produced an 18% raw-material order at Tier-2. Your
+packaging supplier asks why.
+setup lines:
+// observed:
+// POS uptick +03%
+// operator orders +07%
+// DC orders to supplier +12%
+// tier-1 to tier-2 +18%
+
+blank
+// classic bullwhip signature. [amber]
+// supplier wants explanation.
+
+ctx: POS REAL=+3% · TIER-2=+18% · AMP=6× · CAUSE=TBD
+D1 “WHAT IS DRIVING THIS.”:
+good +2 → next:1 “SIGNAL PROCESSING / FORECAST RECALIBRATION” →
+
+“each tier interpreted the previous order as new demand info. lee’s first cause.
+correct diagnosis.”
+warn 0 → next:1 “OPERATORS HOARDING / RATIONING” → “plausible but
+premature. no shortage signal. you may be misdiagnosing forecast amplification
+as hoarding.”
+warn −1 → next:1 “BATCHED ORDERING / EOM” → “doesn’t fit the staircase
+amplification pattern. batching is lumpy, not progressive.”
+D2 “COUNTER-MOVE.”:
+good +2 “SHARE POS DATA UPSTREAM / EVERY TIER” → “classic dampener.
+when each tier sees real demand, they stop forecasting on noisy proxy. lee’s
+prescribed remedy.”
+warn 0 “CONSOLIDATE ORDERS / WEEKLY CADENCE” → “helps batching but
+not signal-processing. remedy for a different disease.”
+bad −2 “HOLD MORE SAFETY STOCK AT EACH TIER” → “lazy answer. absorbed
+variance with capital instead of attacking cause. cost compounds, problem
+persists.”
+optimal: [0, 0]
+fr: BULLWHIP IS AN INFORMATION FAILURE, NOT AN INVENTORY ONE. LEE,
+PADMANABHAN & WHANG (1997) IDENTIFIED FOUR CAUSES — EACH WITH A
+SPECIFIC COUNTER. THE PRINCIPAL DIAGNOSES THE CAUSE BEFORE
+PRESCRIBING. SHARING POS UPSTREAM IS THE HIGHEST-LEVERAGE
+INTERVENTION; IT ATTACKS THE PRIMARY CAUSE.
+Day 8 — S&OP CADENCE (lecture)
+f: Sales & Operations Planning
+o: Wallace (2004)
+cite: Wallace, T. F. “Sales & Operations Planning: The How-To Handbook.” 2004.
+sum: The monthly executive cadence aligning demand, supply, and finance into one
+number. Most are theater; a real S&OP makes decisions.
+Day 9 — INTERMITTENT DEMAND (lecture)
+f: Croston’s Method
+o: Croston (1972)
+
+cite: Croston, J. D. “Forecasting and Stock Control for Intermittent Demands.” Op. Res.
+Q. 23(3), 1972.
+sum: When demand is sporadic, classic exponential smoothing biases high. Croston
+decouples size and interval.
+Day 10 — NEW PRODUCT FORECASTING (lecture)
+f: Bass Diffusion Model
+o: Bass (1969)
+cite: Bass, F. M. “A New Product Growth Model for Consumer Durables.” Mgmt Sci 15(5),
+1969.
+sum: New products have no history. Bass models adoption as innovation + imitation,
+parameterized from analog launches.
+WEEK 3 · INVENTORY
+Day 11 — EOQ · ECONOMIC ORDER QTY
+f: EOQ · Wilson Formula
+o: Harris (1913); Wilson (1934)
+cite: Harris, F. W. “How Many Parts to Make at Once.” Factory: The Magazine of
+Management 10(2), 1913.
+sum: The classic. Q* = √(2DS/H). The point isn’t the answer — it’s that the cost curve is
+flat near optimum.
+Case: The Reorder-Quantity Question
+pre: Reviewing reorder policy for shell-egg cases. Team orders weekly. CFO asks: “is
+this optimal?”
+setup lines:
+// inputs:
+// D (annual demand) 480,000 cases
+// S (cost per order) $480
+// H (holding cost) $1.20 / case / yr
+
+blank
+
+// current: weekly · Q ≈ 9,230 · 52 orders
+
+blank
+// CFO wants the math.
+
+ctx: D=480k cases · S=$480 · H=$1.20 · CURRENT Q=9,230
+quant:
+formula: Q* = √(2 D S / H)
+vars: [D, annual demand, 480,000] · [S, order cost, $480] · [H, holding cost,
+$1.20]
+result: Q* = √(2·480000·480/1.20) ≈ 19,596 cases · ~24.5 orders/yr
+D1 “WHAT Q DO YOU RECOMMEND.”:
+bad −2 → next:1 “STAY WEEKLY · 9,230” → “you stayed 53% under optimum.
+annual cost gap ≈ $7,400 per category. defensible only if there is an unstated
+constraint.”
+good +2 → next:1 “COMPUTE Q* ≈ 19,600 · 24 ORDERS/YR” → “correct. wilson
+formula returns ~19,596. annual cost minimized. you also note the cost curve is
+flat near optimum.”
+warn 0 → next:1 “2× CURRENT · 18,460” → “directionally right, accidentally
+close. you got the answer without the structure — CFO can’t apply this
+elsewhere.”
+D2 “WHY EXACT Q* MATTERS LESS THAN IT LOOKS.”:
+good +2 “THE EOQ COST CURVE IS FLAT NEAR OPTIMUM” → “this is the senior
+insight. ±25% from Q* costs <3% of optimum. round to a pallet/truck, not to the
+digit. CFO writes this down.”
+warn 0 “WE NEED MORE ACCURATE H AND S” → “true but precisely backward.
+since the curve is flat, refining H and S gives you decimals you don’t need.”
+warn −1 “EOQ ASSUMES CONSTANT DEMAND · WRONG MODEL” → “pedantic.
+EOQ is robust; it returns a centerline policy that safety stock complements.”
+optimal: [1, 0]
+fr: EOQ IS NOT REVERED FOR ITS PRECISION — IT IS REVERED FOR ITS
+ROBUSTNESS. HARRIS (1913) GAVE US THE FORMULA; THE LESSON A CENTURY
+LATER IS THAT THE COST CURVE IS FLAT NEAR THE OPTIMUM, SO ROUNDING TO
+
+PRACTICAL CONSTRAINTS (PALLET, TRUCK, MOQ) IS NEARLY FREE. THE
+PRINCIPAL TEACHES THIS BEFORE TEACHING THE FORMULA.
+Day 12 — THE NEWSVENDOR
+f: Critical Fractile · Cu/(Cu+Co)
+o: Edgeworth (1888); Petruzzi & Dada (1999)
+cite: Petruzzi, N. C. & Dada, M. “Pricing and the Newsvendor Problem: A Review with
+Extensions.” Op. Res. 47(2), 1999.
+sum: One-shot stocking under uncertain demand. Optimal stocking quantile = Cu / (Cu +
+Co). Asymmetry of overage vs underage is everything.
+Case: The Promotional Buy
+pre: Buying a one-time promo run of holiday-themed packaging. Demand uncertain;
+unsold units are scrap.
+setup lines:
+// promo packaging buy.
+// unit margin if sold: $4.50 (Cu)
+// scrap cost if unsold: $1.50 (Co)
+
+blank
+// demand (~normal):
+// mean = 80,000
+// stdev = 20,000
+
+blank
+// how many do you order?
+
+ctx: Cu=$4.50 · Co=$1.50 · µ=80,000 · σ=20,000
+quant:
+formula: F(Q*) = Cu / (Cu + Co) → Q* = µ + σ · z
+vars: [Cu/(Cu+Co), critical fractile, 0.75] · [z, normal⁻¹ @ 0.75, 0.674] · [σ·z, safety
+units, 13,490]
+result: Q* ≈ 80,000 + 13,490 ≈ 93,500 units
+
+D1 “ORDER QUANTITY.”:
+bad −2 “ORDER MEAN · 80,000” → “symmetric answer to an asymmetric
+problem. expected lost margin > expected scrap savings. classic newsvendor
+failure.”
+good +2 “CRITICAL FRACTILE · ~93,500” → “correct. since Cu > Co (3:1), overstock to the 75th percentile. protect the margin you can earn against the scrap
+you can absorb.”
+bad −2 “PROTECT DOWNSIDE · 60,000” → “optimized for the wrong loss.
+ordering below mean when Cu > Co leaves margin on the table.”
+optimal: [1]
+fr: THE NEWSVENDOR IS THE FOUNDATIONAL UNCERTAIN-DEMAND PROBLEM.
+THE CRITICAL FRACTILE Cu/(Cu+Co) TRANSLATES THE ECONOMICS DIRECTLY
+INTO A QUANTILE. EDGEWORTH (1888) FORMALIZED IT; EVERY PROMO BUY,
+ETERNALLY, IS AN INSTANCE.
+Day 13 — SAFETY STOCK (lecture)
+f: Cycle vs Safety · z·σ
+o: Brown (1959); King (2011)
+cite: King, P. L. “Crack the Code: Understanding safety stock equations.” APICS, 2011.
+sum: Cycle stock smooths consumption; safety stock absorbs variance. SS = z · √(L·σ²d
++ d²·σ²L) when both demand and lead time vary.
+Day 14 — MULTI-ECHELON (lecture)
+f: METRIC
+o: Sherbrooke (1968)
+cite: Sherbrooke, C. C. “METRIC: A Multi-Echelon Technique for Recoverable Item
+Control.” Op. Res. 16(1), 1968.
+sum: Optimizing each node independently is wasteful. Multi-echelon pools risk across
+the network — typically 20–30% inventory reduction at equivalent service.
+Day 15 — CSL vs FILL RATE (lecture)
+f: Service Level Definitions
+o: Silver, Pyke & Peterson
+
+cite: Silver, E. A. et al. “Inventory Management.” Wiley, 1998, Ch. 7.
+sum: Cycle service is P[no stockout in cycle]; fill rate is E[fraction filled]. Right metric
+depends on cost of customer-level backorder.
+WEEK 4 · SOURCING
+Day 16 — KRALJIC MATRIX
+f: 2×2 Spend Segmentation
+o: Kraljic (HBR 1983)
+cite: Kraljic, P. “Purchasing Must Become Supply Management.” HBR, Sept–Oct 1983.
+sum: 2×2 (supply risk × profit impact) → Routine, Leverage, Bottleneck, Strategic. Each
+quadrant requires a different sourcing strategy.
+Case: Sorting Your $400M Spend Book
+pre: VP wants a one-page categorization of top 12 categories. Friday.
+setup:
+// 12 categories. Kraljic 2×2.
+// axis 1: profit impact (low ↔ high)
+// axis 2: supply risk (low ↔ high)
+
+blank
+// quadrants:
+// ROUTINE · low/low · automate
+// LEVERAGE · high/low · negotiate
+// BOTTLENECK · low/high · secure
+// STRATEGIC · high/high · partner
+
+blank
+// where does CHICKEN belong? [amber]
+
+ctx: CHICKEN $=$142M · SUPPLIERS=3 (concentrated) · SUBSTITUTES=limited ·
+COMPLEXITY=high
+D1 “PLACE CHICKEN.”:
+
+bad −2 → next:1 “LEVERAGE · high $ / low risk” → “wrong quadrant.
+concentrated suppliers, complex spec, hard substitution → risk is high. lazy
+classification leads to negotiation theater.”
+good +2 → next:1 “STRATEGIC · high $ / high risk” → “correct. high spend,
+concentrated supply, real switching cost. kraljic prescribes partnership:
+collaborative forecasting, joint cost reduction, multi-year horizons.”
+bad −2 → next:1 “BOTTLENECK · low $ / high risk” → “$142M is not low impact.
+you would manage chicken like a small specialty chemical. wrong tools.”
+D2 “WHAT IS THE STRATEGY.”:
+good +2 “COLLABORATIVE / 3-YR / OPEN-BOOK” → “kraljic prescribes
+partnership. open-book transparency, multi-year volume commits, joint
+forecasting. retain 20% leverage volume against new entrants.”
+bad −2 “AGGRESSIVE QUARTERLY RFP” → “leverage strategy on a strategic
+category. supplier feels disposable; relationship cools; next disruption costs
+more than you ever saved.”
+warn −1 “SINGLE-SOURCE LOCK / 5-YR FIX” → “over-rotation. traded all
+leverage for certainty. strategic ≠ surrender.”
+optimal: [1, 0]
+fr: KRALJIC (1983) IS NOT A CATEGORIZATION TOOL. IT IS A STRATEGY
+ASSIGNMENT TOOL. EACH QUADRANT HAS A PRESCRIBED MOVE — ROUTINE:
+AUTOMATE; LEVERAGE: NEGOTIATE; BOTTLENECK: SECURE; STRATEGIC:
+PARTNER. APPLYING THE WRONG QUADRANT’S TOOL IS THE MOST COMMON
+SOURCING ERROR. THE PRINCIPAL PLACES BEFORE THEY ACT.
+Day 17 — MAKE-vs-BUY (lecture)
+f: Transaction Cost Economics
+o: Williamson (1985)
+cite: Williamson, O. E. “The Economic Institutions of Capitalism.” Free Press, 1985.
+sum: Asset specificity, uncertainty, frequency determine internalize-vs-contract.
+Williamson won the Nobel for showing why some things should never be outsourced.
+Day 18 — SUPPLIER SEGMENTATION (lecture)
+f: Strategic vs Transactional
+o: Cousins (1999)
+
+cite: Cousins, P. D. “Supply base rationalisation.” EJPSM 5(3–4), 1999.
+sum: Not every supplier is a partner. Tiering by spend, criticality, switching cost lets you
+allocate relationship investment where it pays back.
+Day 19 — SINGLE vs DUAL SOURCE
+f: Supply Game Theory
+o: Tang (2006)
+cite: Tang, C. S. “Perspectives in supply chain risk management.” IJPE 103(2), 2006.
+sum: Single source maximizes leverage; dual source minimizes disruption. Expectedcost calculus depends on disruption probability and recovery time.
+Case: The Fries Diversification Question
+pre: Lamb Weston is ~80% of fries supply ($190M). Operators ask after Oct labor
+scare. VP wants strategy memo by EOM.
+setup:
+// concentration:
+// Lamb Weston 80% $152M
+// Simplot 12% $23M
+// McCain 08% $15M
+
+blank
+// p(disrupt) annual: ~5%
+// recovery time: 8–12 wk
+// expected disruption $: $24M
+
+blank
+// strategy memo. EOM.
+
+ctx: SPEND=$190M · CONC=80% · P(DISRUPT)=5% · EXP $=$24M
+D1 “STRATEGY.”:
+bad −2 “STATUS QUO + RISK MONITORING” → “expected-cost: 5% × $24M =
+$1.2M/yr unmanaged exposure. saved zero negotiation cost; accepted a known
+tail. v2 due Friday.”
+
+good +2 → next:1 “70/20/10 SPLIT · 12-MO TRANSITION” → “tang’s
+prescription. dual-source the 80% to 70%. expected disruption cost drops to
+~$0.5M. premium of $2M/yr is the insurance.”
+warn −1 “FULL MULTI-SOURCE RFP” → “over-rotation. 12-mo transition is itself
+a disruption. cure outweighs disease.”
+D2 “COMMUNICATE TO LAMB.”:
+good +1 “DIRECT · BEFORE THEY HEAR ELSEWHERE” → “tang’s game-theoretic
+insight: the incumbent competes harder for retained volume if they know the
+alternative is real. preserve leverage AND relationship.”
+bad −2 “WAIT / REACTIVE” → “they hear it through the broker network.
+defensive posture, rumor mill, lost two months of partnership conversation.”
+optimal: [1, 0]
+fr: SINGLE-SOURCING IS NOT A POLICY — IT IS A BET ON DISRUPTION
+PROBABILITY × DISRUPTION COST. WHEN P(DISRUPT) × COST EXCEEDS THE
+PRICE PREMIUM OF DUAL SOURCING, YOU ARE OVERPAYING WITH HEADLINE
+RISK. TANG (2006) FORMALIZED THE TRADE; THE PRINCIPAL DOES THE
+EXPECTED-COST MATH BEFORE THE STRATEGY MEMO.
+Day 20 — REVERSE AUCTIONS
+f: Mechanism Design
+o: McAfee & McMillan (1992); Smeltzer & Carr (2003)
+cite: Smeltzer, L. R. & Carr, A. S. “Electronic reverse auctions: Promises, risks and
+conditions for success.” Industrial Mktg Mgmt 32, 2003.
+sum: Reverse auctions excel for commoditized, high-volume, multi-supplier categories
+with low switching cost. They fail spectacularly elsewhere.
+Case: The RFP That Should Be a Conversation
+pre: Category lead requests a 60-day RFP for $24M packaging. One viable
+incumbent. Two weak alternates. VP wants documented price discovery.
+setup:
+// $24M packaging RFP request.
+// viable incumbents: 1
+// weak alternates: 2 (cap-constrained)
+
+// switching cost: moderate-high
+// commoditization: low
+
+blank
+// reverse auction conditions:
+// ≥3 viable bidders FAIL [red]
+// commoditized FAIL [red]
+// low switch cost FAIL [red]
+
+blank
+// the RFP is theater. now what. [amber]
+
+ctx: SPEND=$24M · VIABLE=1 · CONDITIONS=0/3 met · TENURE=7 yr
+D1 “THE PROCESS.”:
+bad −2 “RUN FULL 60-DAY RFP / COMPLIANCE” → “mcafee & mcmillan: a
+competitive auction with one credible bidder is theater. supplier sees it. trust
+eroded; cycle delivers no information.”
+warn 0 “SKIP RFP / DIRECT NEGOTIATION” → “pragmatic but you owe an
+artifact. price discovery has to be defensible.”
+good +2 → next:1 “BENCHMARK + OPEN-BOOK / NO RFP” → “right tool for the
+conditions. price discovery without ritual. doc trail exists. category lead has the
+artifact, VP has the rigor.”
+D2 “FRAME TO VP.”:
+good +1 “ONE-PAGE MEMO / TEMPLATE FOR FUTURE” → “VP forwards as ‘the
+right path for $20M+ categories without ≥3 viable bidders.’ your move becomes
+policy.”
+bad −1 “VERBAL IN 1:1 / NO ARTIFACT” → “no record. when audit challenges,
+you defend it from memory.”
+optimal: [2, 0]
+fr: MECHANISM DESIGN TEACHES THAT AUCTIONS WORK ONLY UNDER SPECIFIC
+CONDITIONS — MULTIPLE CREDIBLE BIDDERS, COMMODITIZED ITEM, LOW
+SWITCHING COST. SMELTZER & CARR (2003) DOCUMENTED THE FAILURE
+MODES. THE PRINCIPAL’S CRAFT IS NAMING THE CONDITIONS BEFORE PICKING
+
+THE TOOL.
+WEEK 5 · CONTRACTS
+Day 21 — BATNA & ZOPA
+f: Principled Negotiation
+o: Fisher & Ury (1981)
+cite: Fisher, R. & Ury, W. “Getting to Yes.” Houghton Mifflin, 1981.
+sum: BATNA = walk-away. ZOPA = overlap of reservation prices. Without these, you’re
+not negotiating, you’re guessing.
+Case: The Annual Renewal
+pre: Mid-tier supplier ($18M sauces) up for renewal. Opened +6%. Your BATNA: resource in 4 months at +2%. They don’t know that.
+setup:
+// negotiation prep:
+// their open +6%
+// your BATNA +2% (4 mo to switch)
+// their BATNA unknown
+
+blank
+// ZOPA exists if their reservation
+// price < +6% AND yours > current.
+
+blank
+// they're waiting for your counter.
+
+ctx: SPEND=$18M · THEIR OPEN=+6% · YOUR BATNA=+2% · SWITCH=4 mo
+D1 “YOUR COUNTER.”:
+warn 0 “COUNTER AT 0% / NEAR YOUR BATNA” → “fisher & ury warn against
+this. opening near BATNA leaves no room. signals weakness. expected close:
+~+3.5%.”
+good +2 “COUNTER AT −2% / LEAVE ROOM” → “signaled BATNA without
+
+revealing it. their move toward zero is the negotiation; your room to move toward
++2% is the deal. expected close: ~+1%.”
+bad −2 “ACCEPT +6% / PRESERVE RELATIONSHIP” → “BATNA at +2%, accepted
++6%. $720k/yr gap is what your category lead asks about next quarter.
+relationships don’t justify giving up four points.”
+optimal: [1]
+fr: NEGOTIATION WITHOUT A BATNA IS NOT NEGOTIATION — IT IS POLITE
+BEGGING. FISHER & URY (1981) GAVE PROCUREMENT THE LANGUAGE. NEVER
+REVEAL THE BATNA, BUT EVERY MOVE IS REFERENCED TO IT. OPEN BELOW YOUR
+TARGET TO LEAVE NEGOTIATION ROOM. THE PRINCIPAL DOES BOTH BEFORE THE
+FIRST CALL.
+Day 22 — REVENUE-SHARING (lecture)
+f: Cachon-Lariviere Coordination
+o: Cachon & Lariviere (2005)
+cite: Cachon, G. P. & Lariviere, M. A. “Supply Chain Coordination with Revenue-Sharing
+Contracts.” Mgmt Sci 51(1), 2005.
+sum: When buyer and supplier have misaligned incentives, fixed-price contracts underperform. Revenue sharing aligns by tying supplier compensation to buyer realization.
+Day 23 — QUANTITY FLEXIBILITY (lecture)
+f: Tsay QF Contracts
+o: Tsay (1999)
+cite: Tsay, A. A. “The Quantity Flexibility Contract.” Mgmt Sci 45(10), 1999.
+sum: Pre-commit a baseline; pay options for flexibility above and below. Buyer pays for
+the option; supplier pays for certainty.
+Day 24 — BUYBACK CONTRACTS (lecture)
+f: Pasternack’s Buyback
+o: Pasternack (1985)
+cite: Pasternack, B. A. “Optimal Pricing and Return Policies for Perishable Commodities.”
+Mktg Sci 4(2), 1985.
+sum: Supplier offers to repurchase unsold inventory at fraction of cost — shifts risk and
+aligns the system. Common in publishing, fashion, perishables.
+
+Day 25 — OPEN-BOOK COSTING (lecture)
+f: Cost Transparency · Mutual Trust
+o: Kulmala, Paranko & Uusi-Rauva (2002)
+cite: Kulmala, H. I. et al. “The role of cost management in network relationships.” IJPE 79,
+2002.
+sum: Both sides see actual cost. Margin becomes a negotiation, not a guess. Works in
+strategic relationships; impossible in transactional ones.
+WEEK 6 · SUPPLIERS
+Day 26 — SUPPLIER SCORECARDS (lecture)
+f: Performance Measurement
+o: Gordon (2008)
+cite: Gordon, S. R. “Supplier Evaluation and Performance Excellence.” J. Ross, 2008.
+sum: What you measure, suppliers manage. Most scorecards measure the easy things;
+the principal measures what drives cost and risk.
+Day 27 — SRM MATURITY (lecture)
+f: A.T. Kearney POEM
+o: A.T. Kearney
+cite: Kearney POEM (Procurement & Operations Excellence Model), 2007 onwards.
+sum: Supplier relationships have a maturity curve. Most companies are stuck at
+“transactional”; few invest in the practices that get to “collaborative.”
+Day 28 — WESTROCK’S SOFT QUARTER
+f: Strategic Supplier Behavior
+o: Cousins (1999); Sako (1992)
+cite: Sako, M. “Prices, Quality and Trust: Inter-firm Relations in Britain and Japan.”
+Cambridge UP, 1992.
+sum: Strategic-tier suppliers require behavioral consistency, not policy. Once classified,
+every interaction must match the classification.
+Case: WestRock’s Soft Quarter
+
+pre: WestRock just delivered Q3 with OTD −6pp and complaints +18%. CFO publicly
+cited “structural recovery in 6–9 months.” QBR in 3 weeks.
+setup:
+// supplier: WestRock
+// spend $48M / yr
+// tier Strategic (Kraljic)
+// relationship 6 yr
+
+blank
+// Q3 signals:
+// OTD 98% → 92% (−6pp) [amber]
+// complaints +18% [amber]
+
+blank
+// QBR in 3 wk. agenda is yours.
+
+ctx: SPEND=$48M · OTD=−6pp · COMPLAINTS=+18% · TIER=STRATEGIC
+D1 “QBR FRAMING.”:
+good +2 → next:1 “LEAD WITH DATA / ASK FOR PLAN” → “classic strategic-tier
+behavior — facts first, ask for response. WestRock arrives prepared. recovery
+plan on the table by week 4.”
+warn 0 → next:1 “OPEN RELATIONSHIP / END WITH CONCERNS” → “soft.
+message lands ambiguous. you respect tier but lose the meeting.”
+bad −2 “DEMAND WRITTEN RESPONSE / TRANSACTIONAL” → “transactional
+playbook on a strategic supplier. WestRock’s commercial lead escalates.
+relationship cools two quarters.”
+D2 “PRICING.”:
+good +2 “HOLD FLAT / RECOVERY-INDEXED” → “aligned to strategic-tier
+behavior. trade short-term flexibility for multi-year alignment. they protect your
+volume in their next allocation crisis.”
+bad −2 “PUSH 3% CONCESSION / NOW” → “transactional move on strategic
+supplier. got 1%, lost a year of goodwill. they recover the 1% in payment terms
+within two quarters.”
+
+optimal: [0, 0]
+fr: SEGMENTATION IS BEHAVIORAL, NOT ANALYTICAL. ONCE YOU CLASSIFY A
+SUPPLIER AS STRATEGIC, EVERY INTERACTION MUST MATCH THAT
+CLASSIFICATION — OR THE SEGMENTATION WAS A LIE. COUSINS (1999) AND
+SAKO (1992) BOTH DOCUMENTED THE FAILURE MODE: COMPANIES PUBLISH
+STRATEGIC TIERING AND THEN BEHAVE TRANSACTIONALLY.
+Day 29 — FMEA · QUALITY SYSTEMS (lecture)
+f: Failure Mode & Effects
+o: US Military (1949); Stamatis (2003)
+cite: Stamatis, D. H. “FMEA from Theory to Execution.” ASQ Press, 2003.
+sum: Score each failure mode by Severity × Occurrence × Detection. RPN ≥ 100 needs a
+mitigation plan. Low-tech, high-leverage.
+Day 30 — SUPPLIER RISK MONITORING (lecture)
+f: Multi-Tier Surveillance
+o: Sheffi & Rice (2005)
+cite: Sheffi, Y. & Rice, J. B. “A Supply Chain View of the Resilient Enterprise.” MIT Sloan
+Mgmt Rev 47(1), 2005.
+sum: Continuous monitoring across financial, operational, geopolitical, ESG dimensions
+— across tiers, not just Tier-1.
+WEEK 7 · LOGISTICS
+Day 31 — MODE SELECTION (lecture)
+f: Cost / Speed / Reliability
+o: McKinnon (2014)
+cite: McKinnon, A. C. “Logistics 2050.” Routledge, 2014.
+sum: Four-mode taxonomy (truck, rail, ocean, air) plus intermodal. Choosing wrong is
+one of the highest-leverage cost mistakes.
+Day 32 — NETWORK DESIGN (lecture)
+f: p-Median / MILP
+o: Daskin (2013)
+
+cite: Daskin, M. S. “Network and Discrete Location.” Wiley, 2013.
+sum: Where you put DCs matters more than how efficiently you run them. Network
+design is decadal; ops execution is daily.
+Day 33 — DC vs CROSS-DOCK (lecture)
+f: Distribution Strategy
+o: Bartholdi & Hackman (2008)
+cite: Bartholdi, J. J. & Hackman, S. T. “Warehouse & Distribution Science.” 2008.
+sum: Inventory-holding DCs vs flow-through cross-docks. The decision turns on
+velocity, predictability, and SKU mix.
+Day 34 — LAST-MILE ECONOMICS (lecture)
+f: Density × Frequency
+o: Boyer et al. (2009)
+cite: Boyer, K. K. et al. “The Last Mile: A Crucible for Operations.” J. Op. Mgmt., 2009.
+sum: Last mile is 40–60% of total distribution cost. Density and route frequency drive
+economics; nothing else matters as much.
+Day 35 — INBOUND CONSOLIDATION (lecture)
+f: Multi-Stop VRP
+o: Toth & Vigo (2014)
+cite: Toth, P. & Vigo, D. “Vehicle Routing.” SIAM, 2014.
+sum: Multi-stop pickup routes that consolidate small inbound flows. Common in lean
+automotive; underused in QSR.
+WEEK 8 · COMMODITY
+Day 36 — COMMODITY CLASSIFICATION
+f: Index-Linked vs Spec-Driven
+o: Lapide; Kraljic revisited
+cite: Lapide, L. “Commodity vs Differentiated Products.” Supply Chain Mgmt Review,
+various.
+sum: A commodity has price discovery via published indices. A specification-driven
+
+category does not. The strategy differs.
+Case: The September Chicken Spike
+pre: Largest broiler supplier signals +14% effective immediately. Threshold clause
+hit. SVP wants a recommendation by Friday.
+setup:
+// commodity classification:
+// USDA broiler index — yes
+// feed indices — yes
+// price discovery — strong
+
+blank
+// → INDEX-LINKED commodity. [amber]
+// the contract should be too.
+
+blank
+// supplier asks +14%.
+// threshold clause: hit. [red]
+// 4 mo. remain.
+
+ctx: SPEND=$142M · CLASS=INDEX-LINKED · TERM=4 mo · CLAUSE=HIT
+D1 “FIRST MOVE.”:
+bad −2 “ACCEPT +14% / PASS-THROUGH” → “absorbed a true-commodity
+move with no analytical pushback. operators escalated within 48h. solving
+supplier, inheriting politics.”
+good +2 → next:1 “LOCK 6-MO FORWARD / FEED-INDEXED” → “correct
+treatment of an index-linked commodity. supplier accepts: certainty for them,
+fair price for you.”
+warn −1 “BLEND 20% SECONDARY / LOWER SPEC” → “wrong tool. applied a
+Kraljic-leverage move to a strategic commodity. spec drift in week three.”
+D2 “COMMUNICATION.”:
+good +1 “NETWORK MEMO · THIS WEEK · WITH ANALYTICS” → “operators see
+the structure, not the headline. VP forwards as ‘how supply chain
+
+communicates.’ commodity literacy compounds.”
+bad −2 “WAIT / REACTIVE / ON INVOICE” → “rumor mill outpaced your facts. two
+weeks repairing trust you did not need to break.”
+optimal: [1, 0]
+fr: COMMODITY MANAGEMENT IS INDEX MANAGEMENT. WHEN PRICE DISCOVERY
+EXISTS PUBLICLY, YOUR CONTRACT SHOULD REFLECT IT — INDEX-LINKED, WITH
+FAIR FLOOR AND CEILING. ABSORBING UNILATERAL MOVES IS A POLITICAL
+FAILURE; FIGHTING THEM WITHOUT THE INDEX IS AN ANALYTICAL ONE.
+Day 37 — FINANCIAL HEDGING (lecture)
+f: Futures / Forwards
+o: Hull
+cite: Hull, J. C. “Options, Futures, and Other Derivatives.” Pearson, 11th ed.
+sum: Hedging decouples P&L from commodity moves. Cost is option premium and basis
+risk. Used surgically; abused regularly.
+Day 38 — BASIS RISK (lecture)
+f: Hedge ≠ Underlying
+o: Geman (2005)
+cite: Geman, H. “Commodities and Commodity Derivatives.” Wiley, 2005.
+sum: When the hedged contract is not exactly the physical exposure, residual basis risk
+remains. Quantified by basis variance.
+Day 39 — INDEX-BASED PRICING
+f: Risk-Sharing Surcharges
+o: Cachon (2003)
+cite: Cachon, G. P. “Supply Chain Coordination with Contracts.” Handbooks in OR & MS,
+Vol. 11, 2003.
+sum: Index-based surcharges share commodity risk symmetrically. The contract
+becomes self-adjusting.
+Case: Diesel and the DC Network
+pre: Diesel just spiked +22%. 3PL passed through 60% via the contract surcharge —
+your net freight is +9%. True-up in 14 days.
+
+setup:
+// commodity move:
+// diesel +22% in 3 wk [amber]
+
+blank
+// contract structure (current):
+// index-linked surcharge / 60% pass
+// true-up quarterly / locked formula
+// net freight +9%
+
+blank
+// network: 7M miles / yr
+// $ exposure: ~$2.3M annualized
+
+ctx: DIESEL=+22% · PASS-THRU=60% · NET=+9% · EXPOSURE=$2.3M
+D1 “NEGOTIATE OR ACCEPT.”:
+bad −1 “ACCEPT THE CONTRACT FORMULA” → “compliant, missed the moment.
+cachon: index-based contracts ARE the negotiation, but parameters renegotiate
+when conditions change.”
+good +2 “PUSH 3PL TO 30% SHARE × 90D / VOLUME COMMIT” → “they accept
+25% in exchange for a 12-mo volume commitment. traded certainty for fair price
+— the cachon-coordination move.”
+warn −1 “HEDGE DIESEL FINANCIALLY” → “clever, but you decoupled fuel risk
+and added a managerial liability your team has no bandwidth for. basis risk you
+don’t understand will eat any savings.”
+optimal: [1]
+fr: INDEX-BASED CONTRACTS RUN AUTOMATICALLY — UNTIL CONDITIONS
+CHANGE. THE PRINCIPAL UNDERSTANDS THAT THE CONTRACT ITSELF IS A
+NEGOTIATED OBJECT WHOSE PARAMETERS RE-OPEN WHEN MARKET
+CONDITIONS DIVERGE FROM THE ASSUMPTIONS. CACHON (2003) FORMALIZED
+THE COORDINATION; THE EVERYDAY MOVE IS ASKING FOR A TEMPORARY RECOORDINATION.
+Day 40 — PRICE-VOLUME DISCOUNTS (lecture)
+
+f: All-Units vs Incremental
+o: Munson & Rosenblatt (1998)
+cite: Munson, C. L. & Rosenblatt, M. J. “Theories and realities of quantity discounts.” J.
+Op. Mgmt. 16, 1998.
+sum: All-units discounts reward crossing thresholds; incremental discounts reward
+volume marginally. Each induces different ordering behavior.
+WEEK 9 · RISK
+Day 41 — POWER OF RESILIENCE
+f: Sheffi · Resilience Quadrants
+o: Sheffi (2015)
+cite: Sheffi, Y. “The Power of Resilience.” MIT Press, 2015.
+sum: High-impact / low-probability disruptions need pre-built response capability.
+Sheffi: redundancy (slow, expensive) vs flexibility (fast, cheap).
+Case: The Single-DC Question
+pre: 94% of western US distribution flows through one DC in Reno. Disruption
+probability ~1.5%/yr. Recovery: 6–10 weeks.
+setup:
+// node analysis (Reno DC):
+// western US flow 94%
+// p(disrupt) annual ~1.5%
+// recovery time 6–10 wk
+// est. impact ~$48M
+
+blank
+// expected disruption: ~$0.7M/yr
+
+blank
+// VP asks: do we need a second site? [amber]
+
+ctx: FLOW=94% · P(DISRUPT)=1.5% · RECOVERY=6–10 wk · EXP $=$0.7M
+
+D1 “RESILIENCE INVESTMENT.”:
+warn −1 → next:1 “BUILD REDUNDANT DC ($14M CAPEX)” → “sheffi flags this
+— redundancy is expensive. payback at $0.7M/yr is 20 years. capex committed
+to a low-probability event with cheaper alternatives.”
+good +2 → next:1 “PRE-NEGOTIATED CO-PACK + 3PL FLEX CAPACITY” →
+“sheffi’s preferred move: flexibility, not redundancy. ~$0.4M/yr cost. payback in
+<2 years on expected disruption value, plus optionality.”
+bad −2 “ACCEPT EXPOSURE / MONITOR” → “$0.7M/yr unmanaged tail on a
+$48M event. betting against a known distribution. when it happens (over a
+decade, it will), you are the executive on the call.”
+D2 “WHAT YOU TELL VP.”:
+good +2 “EXPECTED-COST LANGUAGE / NPV CASE” → “VP understands. capex
+committee approves the flex contract. resilience becomes a defensible line item,
+not a panic spend.”
+warn 0 “RISK NARRATIVE / ‘RECENT EVENTS’” → “works for one cycle. when
+this VP rotates and the next one asks ‘why are we still paying for this,’ you have
+no defense beyond fear.”
+optimal: [1, 0]
+fr: SHEFFI (2015) DISTINGUISHED REDUNDANCY (BUILD TWO OF EVERYTHING)
+FROM FLEXIBILITY (BUILD ONE THAT CAN ADAPT, AND CONTRACT FOR THE
+REST). REDUNDANCY IS A CAPEX PROBLEM; FLEXIBILITY IS A CONTRACT-DESIGN
+PROBLEM. THE PRINCIPAL CHOOSES FLEXIBILITY WHEN THE ECONOMICS PERMIT
+— BECAUSE FLEXIBILITY ALSO CREATES OPTIONALITY THE BUSINESS NEVER
+ASKED FOR.
+Day 42 — SPOF ANALYSIS (lecture)
+f: Single Point of Failure
+o: Kleindorfer & Saad (2005)
+cite: Kleindorfer, P. R. & Saad, G. H. “Managing Disruption Risks in Supply Chains.”
+POMS 14(1), 2005.
+sum: Map dependencies. Where one node’s failure cascades, you have a SPOF. Most
+firms have 2–4 they don’t see.
+Day 43 — BUSINESS CONTINUITY (lecture)
+
+f: ISO 22301
+o: ISO 22301:2019
+cite: ISO 22301:2019 — Business Continuity Management Systems.
+sum: The standard. RTO (recovery time) and RPO (recovery point) are the two numbers
+a BCP must answer.
+Day 44 — CLIMATE & GEOPOLITICAL RISK (lecture)
+f: Physical / Transition Risk
+o: IPCC AR6; ISSB
+cite: IPCC Sixth Assessment Report, 2023; ISSB IFRS S2.
+sum: Physical (acute & chronic) and transition (policy, technology, market) risks.
+Increasingly disclosed; increasingly priced into capital.
+Day 45 — CYBER & DATA RISK (lecture)
+f: NIST SP 800-161
+o: NIST (Boyens et al.)
+cite: Boyens, J. et al. “Cybersecurity Supply Chain Risk Management.” NIST SP 800161r1, 2022.
+sum: Tier-N cyber exposure is a supply chain question. SBOMs and supplier security
+attestations are now table stakes.
+WEEK 10 · ANALYTICS
+Day 46 — LP INTUITION (lecture)
+f: Linear Programming
+o: Dantzig (1947)
+cite: Dantzig, G. B. “Linear Programming and Extensions.” Princeton, 1963.
+sum: Most operations problems are LPs in disguise. Intuition matters more than the
+solver — what changes the answer is the binding constraints.
+Day 47 — DECISION TREES & EVPI
+f: Expected Value of Perfect Info
+o: Raiffa (1968)
+
+cite: Raiffa, H. “Decision Analysis.” Addison-Wesley, 1968.
+sum: EVPI is the maximum you should pay for any information improvement. If a study
+costs $X but EVPI < $X, the study is uneconomical regardless of quality.
+Case: The Market-Study Question
+pre: A consultancy offers a $180k study that would resolve uncertainty on a $4M
+new-product procurement decision. Your team is split.
+setup:
+// the decision tree:
+// without study:
+// E[outcome] = $4M·(60%·1.2) +
+// $4M·(40%·0.6) = $3.84M
+// with perfect info:
+// always pick best = $4.32M
+// EVPI = $4.32M − $3.84M = $480k [amber]
+
+blank
+// study cost: $180k
+// study quality: ~70%
+
+ctx: STUDY $=$180k · EVPI=$480k · QUALITY=70% · EVII=$336k
+quant:
+formula: EVPI = E[max] − E[base]; EVII ≈ EVPI · quality
+vars: [EVPI, max value of info, $480k] · [q, imperfect info factor, 0.70] · [EVII,
+expected value imperfect info, $336k]
+result: EVII − Cost = $336k − $180k = $156k > 0 → BUY
+D1 “BUY THE STUDY OR NOT.”:
+good +2 “BUY · EVII > COST” → “correct. raiffa: EVPI gives the ceiling, study
+quality scales it down to EVII. $336k − $180k = $156k positive. you bought
+defensibly.”
+bad −2 “DON’T BUY · GUT FEELS EXPENSIVE” → “ignored a $156k expected
+
+gain because the headline looked big. classic anchoring failure raiffa warned
+about.”
+warn 0 “NEGOTIATE STUDY DOWN TO $100k” → “fine, but missed the lesson.
+the question was never the price — it was whether EVII justified the price. $180k
+with $336k EVII was already a buy.”
+optimal: [0]
+fr: EVPI IS THE SHARPEST TOOL IN DECISION ANALYSIS. IT GIVES YOU AN UPPER
+BOUND ON WHAT INFORMATION CAN BE WORTH — INDEPENDENT OF THE COST.
+RAIFFA (1968) FORMALIZED IT IN A WAY STILL OPERATIONALLY USED FIVE
+DECADES LATER. THE PRINCIPAL COMPUTES EVPI BEFORE EVALUATING ANY
+STUDY, RFI, OR ADVISORY ENGAGEMENT.
+Day 48 — SENSITIVITY ANALYSIS (lecture)
+f: Tornado Diagrams
+o: Saltelli et al. (2008)
+cite: Saltelli, A. et al. “Global Sensitivity Analysis: The Primer.” Wiley, 2008.
+sum: Most variables don’t move the answer much. Sensitivity analysis identifies the 2–3
+that do, and that is where attention belongs.
+Day 49 — SIMULATION THINKING (lecture)
+f: Monte Carlo for Operations
+o: Law & Kelton (2007)
+cite: Law, A. M. & Kelton, W. D. “Simulation Modeling and Analysis.” McGraw-Hill, 5th ed.
+sum: When closed-form is unavailable, Monte Carlo gives the answer with a confidence
+interval. Thinking precedes the code.
+Day 50 — WHEN MODELS FAIL (lecture)
+f: Box: All Models Are Wrong
+o: Box (1976)
+cite: Box, G. E. P. “Science and Statistics.” JASA 71(356), 1976.
+sum: “All models are wrong, but some are useful.” The principal’s discipline is knowing
+when the model has stopped being useful.
+WEEK 11 · STRATEGY
+
+Day 51 — OPERATIONS STRATEGY · 4Vs (lecture)
+f: Slack 4Vs
+o: Slack, Brandon-Jones & Johnston
+cite: Slack, N. et al. “Operations Management.” Pearson, 9th ed.
+sum: Volume / Variety / Variation / Visibility. Each affects unit cost differently; matching
+the four to the product’s economics is strategy.
+Day 52 — PROCESS CHOICE (lecture)
+f: Hayes-Wheelwright Matrix
+o: Hayes & Wheelwright (1979)
+cite: Hayes, R. H. & Wheelwright, S. C. “Link manufacturing process and product life
+cycles.” HBR, Jan 1979.
+sum: Job shop, batch, line, continuous. Product life-cycle stage and volume determine
+the right process; mismatches kill margins.
+Day 53 — THEORY OF CONSTRAINTS
+f: TOC · The Goal
+o: Goldratt (1984)
+cite: Goldratt, E. M. & Cox, J. “The Goal.” North River Press, 1984.
+sum: Throughput is set by the slowest constraint. Improvements anywhere else are
+illusions. Five focusing steps: identify, exploit, subordinate, elevate, repeat.
+Case: Where Is the Bottleneck
+pre: A new product launch is missing volume targets by 12%. Six functions blame
+each other. You have one quarter.
+setup:
+// observed throughput gap: −12% [amber]
+
+blank
+// candidate constraints (utilization):
+// raw mat. supply 72% util
+// primary line 96% util [amber]
+
+// QA / inspection 81% util
+// secondary packaging 89% util
+// DC outbound 76% util
+
+blank
+// where do you focus.
+
+ctx: GAP=−12% · LINE=96% util · NEXT=89% · WINDOW=1 qtr
+D1 “IDENTIFY THE CONSTRAINT.”:
+good +2 → next:1 “PRIMARY LINE @ 96% UTIL” → “correct. goldratt step 1:
+identify. utilization near ceiling = the constraint. every other improvement is futile
+until this moves.”
+bad −2 “RAW MATERIAL @ 72%” → “low utilization is the consequence of a
+downstream constraint, not a constraint itself. you misread the system.”
+warn −1 → next:1 “QA / INSPECTION @ 81%” → “plausible candidate, but 96%
+beats 81%. work the highest first.”
+D2 “NEXT MOVE.”:
+good +2 “EXPLOIT THE LINE / OEE PROGRAM / SHIFT BALANCING” → “goldratt
+step 2: exploit before elevating. squeeze every minute out of the existing line
+before capex. typical lift: 8–14%.”
+bad −2 “BUY ANOTHER LINE ($8M CAPEX)” → “skipped step 2. elevation before
+exploitation is wasted capital. new line runs at 80% util and the question reopens
+in 18 months.”
+warn 0 “SUBORDINATE EVERYTHING ELSE TO THE LINE” → “goldratt step 3,
+executed before step 2. you would coordinate around the constraint without first
+making it as productive as it can be.”
+optimal: [0, 0]
+fr: GOLDRATT (1984) GAVE OPERATIONS THE FIVE FOCUSING STEPS. IDENTIFY,
+EXPLOIT, SUBORDINATE, ELEVATE, REPEAT. THE STEPS ARE ORDERED FOR A
+REASON: EXPLOITING IS NEAR-FREE; ELEVATING REQUIRES CAPEX. SKIPPING TO
+ELEVATION IS THE MOST EXPENSIVE COMMON ERROR IN MANUFACTURING.
+Day 54 — LEAN · TPS (lecture)
+f: Toyota Production System
+
+o: Ohno (1988); Womack & Jones (1996)
+cite: Womack, J. P. & Jones, D. T. “Lean Thinking.” Simon & Schuster, 1996.
+sum: Value, value stream, flow, pull, perfection. Lean is a system, not a toolkit; most
+Lean programs fail by treating it as the latter.
+Day 55 — SCALING SUPPLY CHAINS (lecture)
+f: Coordination as Constraint
+o: Sull & Eisenhardt (2015)
+cite: Sull, D. & Eisenhardt, K. M. “Simple Rules.” Houghton Mifflin, 2015.
+sum: At scale, coordination cost dominates execution cost. Simple rules outperform
+comprehensive policies because they replicate.
+WEEK 12 · APPLIED
+Day 56 — SCOPE 3 CARBON (lecture)
+f: GHG Protocol
+o: WRI / WBCSD (2011)
+cite: GHG Protocol Corporate Value Chain (Scope 3) Standard, 2011.
+sum: Scope 3 accounts for 70–95% of most companies’ emissions. Categories 1
+(purchased goods) and 4 (transport) dominate.
+Day 57 — CIRCULAR SUPPLY CHAINS (lecture)
+f: Linear → Circular
+o: Ellen MacArthur Foundation
+cite: Ellen MacArthur Foundation. “Towards the Circular Economy.” 2013.
+sum: Reduce, reuse, refurbish, remanufacture, recycle. Each requires its own sourcing
+logic; most firms don’t yet have the contract templates.
+Day 58 — AI/ML IN OPERATIONS (lecture)
+f: Decision Support · Not Replacement
+o: Simchi-Levi (2014)
+cite: Simchi-Levi, D. “Operations Rules.” MIT Press, 2014.
+
+sum: ML excels at forecasting, anomaly detection, constrained optimization. It fails at
+strategy. The principal pairs the right tool with the right question.
+Day 59 — THE PRINCIPAL’S CRAFT (lecture)
+f: Cross-Framework Synthesis
+o: Curated · multiple traditions
+cite: Lee, Sheffi, Goldratt, Cachon, Tang, Raiffa — selected works.
+sum: A senior principal applies 4–6 frameworks to most problems, not one. The skill is
+selection and combination, not depth in any single one.
+Day 60 — CAPSTONE (lecture)
+f: Integrated Decision Under Constraint
+o: Synthesis
+cite: Curated from Lee, Kraljic, Sheffi, Goldratt, Cachon, Tang, Raiffa.
+sum: A scenario requiring simultaneous application of demand framing, sourcing
+classification, contract design, risk pricing, and communication.
+Case count: Days 1, 7, 11, 12, 16, 19, 20, 21, 28, 36, 39, 41, 47, 53 are full cases (14 of
+60). All others are lectures. (Note: the production reference build has 12 cases; agent
+may add 2 more or hold to 12 — but day numbers 1, 7, 11, 12, 16, 19, 20, 21, 28, 36, 39,
+41, 47, 53 are the canonical case days.)
+
+6.4 Glossary
+50 canonical terms. Render as a 2-column grid. Render verbatim:
+const GLOSSARY = [
+['TCO',
+
+'Total Cost of Ownership — full lifecycle cost: acquisition, possession,
+
+['CODP',
+
+'Customer Order Decoupling Point — where you commit to specific demand (M
+
+['ABC',
+
+'Pareto-based SKU classification: A items (~80% value), B (~15%), C (~5%)
+
+['MAD/RMSE/MAPE', 'Forecast error metrics: Mean Absolute Deviation, Root Mean Squared Error
+['BULLWHIP',
+
+'Demand variance amplification upstream. 4 causes: signal processing, rat
+
+['S&OP',
+
+'Sales & Operations Planning — monthly executive cadence aligning demand,
+
+['CROSTON',
+
+'Forecast method for intermittent demand; decouples size and inter-arriva
+
+['BASS MODEL',
+
+'New-product diffusion with innovation (p) and imitation (q) coefficients
+
+['EOQ',
+
+'Economic Order Quantity. Q* = √(2DS/H). Robust because cost curve is fla
+
+['NEWSVENDOR',
+
+'Single-period stocking under uncertain demand. Optimal quantile = Cu / (
+
+['SAFETY STOCK',
+
+'Inventory beyond cycle stock to absorb variance. SS = z · σ.'],
+
+['METRIC',
+
+'Multi-Echelon Technique for Recoverable Item Control. Pools risk across
+
+['CSL / FILL RATE','Cycle Service Level (P[no stockout]) vs Fill Rate (E[fraction filled]).
+
+['KRALJIC',
+
+'2×2 spend segmentation by supply risk × profit impact: Routine, Leverage
+
+['TCE',
+
+"Transaction Cost Economics — Williamson's framework for make-vs-buy via
+
+['SUPPLIER TIERING','Strategic vs transactional segmentation. Different tiers warrant diffe
+
+['DUAL SOURCING', 'Splitting volume across two suppliers. Trades unit price for disruption-
+
+['REVERSE AUCTION','Buyer-side competitive bidding. Works only for commoditized, multi-bidd
+['BATNA',
+
+'Best Alternative To a Negotiated Agreement. Your walk-away. Never reveal
+
+['ZOPA',
+
+'Zone Of Possible Agreement. Overlap between buyer and seller reservation
+
+['REVENUE SHARING','Contract aligning supplier compensation to buyer realization (Cachon-La
+['QF CONTRACT',
+
+'Quantity Flexibility — pre-commit baseline + paid options for variation
+
+['BUYBACK',
+
+'Supplier repurchase of unsold inventory at fraction of cost (Pasternack)
+
+['OPEN-BOOK',
+
+'Cost transparency between buyer and supplier. Margin becomes negotiated,
+
+['POEM',
+
+'Procurement & Operations Excellence Model — A.T. Kearney supplier maturi
+
+['FMEA',
+
+'Failure Mode & Effects Analysis. RPN = Severity × Occurrence × Detection
+
+['p-MEDIAN',
+
+'Facility location formulation: minimize weighted distance from demand to
+
+['CROSS-DOCK',
+
+'Distribution facility with no inventory holding; flow-through only.'],
+
+['VRP',
+
+'Vehicle Routing Problem. NP-hard combinatorial optimization for multi-st
+
+['INDEX-LINKED',
+
+'Contract pricing tied to a published commodity index. Self-adjusting as
+
+['BASIS RISK',
+
+'Mismatch between hedge instrument and physical exposure. Residual risk a
+
+['ALL-UNITS',
+
+'Volume discount applied retroactively to all units when threshold is cro
+
+['RESILIENCE',
+
+'Sheffi: redundancy (slow/expensive) vs flexibility (fast/cheap).'],
+
+['SPOF',
+
+'Single Point of Failure. A node whose disruption cascades to system coll
+
+['RTO / RPO',
+
+'Recovery Time / Recovery Point Objectives. The two BCP numbers.'],
+
+['SBOM',
+
+'Software Bill of Materials. Cyber supply chain transparency.'],
+
+['EVPI',
+
+'Expected Value of Perfect Information. Maximum justifiable spend on info
+
+['EVII',
+
+'Expected Value of Imperfect Information. EVPI scaled by quality.'],
+
+['TORNADO',
+
+'Sensitivity diagram showing variables ranked by impact on outcome.'],
+
+['MONTE CARLO',
+
+'Simulation method using repeated random sampling to estimate distributio
+
+['4 Vs',
+
+'Volume, Variety, Variation, Visibility. Slack et al. operations strategy
+
+['TOC',
+
+'Theory of Constraints (Goldratt). Five focusing steps: identify, exploit
+
+['TPS',
+
+'Toyota Production System. Pull, jidoka, heijunka, kanban. The basis for
+
+['SCOPE 3',
+
+'Indirect emissions across the value chain. Categories 1 and 4 dominate.'
+
+['CIRCULAR',
+
+'Supply chain that designs out waste — reduce, reuse, refurbish, remanufa
+
+['COGS',
+
+'Cost of Goods Sold. Aggregate TCO at the product level. Drives gross mar
+
+['OTD',
+
+'On-Time Delivery. Standard supplier scorecard metric.'],
+
+['OEE',
+
+'Overall Equipment Effectiveness = Availability × Performance × Quality.'
+
+['MOQ',
+
+'Minimum Order Quantity. Supplier-imposed lower bound; binding on EOQ.'],
+
+['NPV',
+
+'Net Present Value. Time-discounted cash flows; canonical investment crit
+
+['CV',
+
+'Coefficient of Variation = σ / µ. Demand variability normalized.']
+
+];
+
+6.5 Reading list
+22 entries. Format: [tier, author, work, publisher, topic, day] . CANON tier renders
+with green border; CORE tier with amber border.
+const READING = [
+
+['CANON', 'Simchi-Levi, Kaminsky & Simchi-Levi.', 'Designing and Managing the Supply Chain'
+['CORE',
+
+'Ellram, L. M.',
+
+'"Total cost of ownership."',
+
+['CORE',
+
+'Choi, T. Y. & Linton, T.', '"Don\'t Let Your Supply Chain Control Your Business.
+
+['CORE',
+
+'Fisher, M. L.',
+
+'"What Is the Right Supply Chain for Your Product?"',
+
+['CANON', 'Lee, Padmanabhan & Whang.', '"Information Distortion in a Supply Chain: The Bull
+['CANON', 'Silver, Pyke & Peterson.', 'Inventory Management and Production Planning',
+['CORE',
+
+'Petruzzi, N. C. & Dada, M.', '"Pricing and the Newsvendor Problem."',
+
+['CANON', 'Kraljic, P.',
+
+'"Purchasing Must Become Supply Management."',
+
+['CANON', 'Williamson, O. E.',
+
+'The Economic Institutions of Capitalism',
+
+['CORE',
+
+'"Perspectives in supply chain risk management."',
+
+'Tang, C. S.',
+
+['CANON', 'Fisher, R. & Ury, W.',
+['CORE',
+
+'Getting to Yes',
+
+'Cachon, G. P. & Lariviere, M. A.', '"Supply Chain Coordination with Revenue-Shar
+
+['CANON', 'Sheffi, Y. & Rice, J. B.', '"A Supply Chain View of the Resilient Enterprise."',
+['CORE',
+
+'Daskin, M. S.',
+
+'Network and Discrete Location',
+
+['CORE',
+
+'Hull, J. C.',
+
+'Options, Futures, and Other Derivatives',
+
+['CANON', 'Sheffi, Y.',
+
+'The Power of Resilience',
+
+['CANON', 'Raiffa, H.',
+
+'Decision Analysis',
+
+['CORE',
+
+'"Science and Statistics."',
+
+'Box, G. E. P.',
+
+['CANON', 'Goldratt, E. M. & Cox, J.', 'The Goal',
+['CANON', 'Womack & Jones.',
+
+'Lean Thinking',
+
+['CORE',
+
+'WRI / WBCSD.',
+
+'GHG Protocol Corporate Value Chain (Scope 3) Standard',
+
+['CORE',
+
+'Simchi-Levi, D.',
+
+'Operations Rules',
+
+];
+
+7 · UI components
+7.1 The panel chassis ( .machine )
+.machine {
+position: relative; z-index: 1;
+max-width: 980px; margin: 0 auto;
+background: linear-gradient(180deg, #D4CCB6 0%, #BFB6A0 50%, #B0A892 100%);
+padding: 24px; border-radius: 10px;
+box-shadow:
+inset 0 1px 0 rgba(255,255,255,.55),
+inset 0 -1px 0 rgba(0,0,0,.18),
+inset 0 0 0 1px rgba(0,0,0,.16),
+0 30px 60px rgba(0,0,0,.5),
+0 8px 16px rgba(0,0,0,.3);
+overflow: hidden;
+}
+.machine::before { /* hairline ridges */
+content: ''; position: absolute; inset: 0;
+
+background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' widt
+opacity: .45; pointer-events: none;
+}
+
+7.2 Corner screws ( .screw.tl|.tr|.bl|.br )
+14×14px circles with radial gradient, an offset diagonal slot, and a tiny shine. Each corner
+has a distinct rotation so it doesn’t look templated.
+.screw {
+position: absolute; width: 14px; height: 14px; border-radius: 50%;
+background: radial-gradient(circle at 32% 30%, #7A715E 0%, #2E281E 80%);
+box-shadow:
+inset 0 -1px 1px rgba(255,255,255,.18),
+inset 0 1px 1px rgba(0,0,0,.5),
+0 1px 2px rgba(0,0,0,.5);
+z-index: 2;
+}
+.screw::after {
+content: ''; position: absolute;
+top: 50%; left: 18%; right: 18%; height: 1.6px;
+background: rgba(0,0,0,.65);
+transform: translateY(-50%) rotate(38deg);
+}
+.screw.tl { top: 10px; left: 10px; }
+.screw.tr { top: 10px; right: 10px; }
+
+.screw.tr::after { transform: translateY(-50%) rotate(
+
+.screw.bl { bottom: 10px; left: 10px; } .screw.bl::after { transform: translateY(-50%) rotate
+
+.screw.br { bottom: 10px; right: 10px; } .screw.br::after { transform: translateY(-50%) rotat
+
+7.3 LCD (the screen)
+The LCD is a green-phosphor terminal with scan lines, subtle flicker, vignette glow, and a
+typewriter cursor.
+.lcd {
+background: #0E1F0C;
+color: #B8E090;
+padding: 22px 24px;
+border-radius: 6px;
+box-shadow:
+inset 0 3px 14px rgba(0,0,0,.85),
+inset 0 0 80px rgba(0,0,0,.5),
+0 1px 0 rgba(255,255,255,.45);
+position: relative;
+overflow: hidden;
+
+min-height: 380px;
+margin-bottom: 18px;
+}
+.lcd::before { /* scan lines */
+content: ''; position: absolute; inset: 0;
+background-image: repeating-linear-gradient(
+0deg,
+rgba(0,0,0,0) 0,
+rgba(0,0,0,0) 2px,
+rgba(0,0,0,.22) 2px,
+rgba(0,0,0,.22) 3px
+);
+pointer-events: none; z-index: 2;
+}
+.lcd::after { /* glow + flicker */
+content: ''; position: absolute; inset: 0;
+background: radial-gradient(ellipse at 50% 30%, rgba(184,224,144,.04), transparent 70%);
+pointer-events: none; z-index: 1;
+animation: flicker 3.7s ease-in-out infinite;
+}
+@keyframes flicker {
+0%,100% { opacity: 1; }
+48% { opacity: .85; }
+49% { opacity: 1; }
+72% { opacity: .95; }
+74% { opacity: 1; }
+}
+
+LCD line classes
+Class
+
+Color
+
+(default)
+
+#B8E090
+
+.dim
+
+rgba(184,224,144,.55)
+
+.amber
+
+#FFC080
+
+.green-bold
+
+#C8F0A0 weight 600
+
+.red
+
+#FF7A5C weight 600
+
+.title
+
+Major Mono, 28px, #C8F0A0 , glow
+
+.divider
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ in dim
+
+Cursor
+
+.cursor {
+display: inline-block; width: 8px; height: 1em;
+background: #B8E090; vertical-align: -2px; margin-left: 2px;
+animation: cb 1.05s steps(2) infinite;
+box-shadow: 0 0 6px rgba(184,224,144,.7);
+}
+@keyframes cb { 50% { opacity: 0; } }
+
+Click LCD to skip
+Add a click handler on .lcd that sets a _skip = true flag the typewriter checks each
+frame. Once true, the current line completes instantly and all queued lines fast-forward.
+Reset on clearLCD() .
+
+7.4 Mode row (5 buttons)
+.mode-row {
+display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
+padding: 10px; background: #B0A892; border-radius: 6px;
+
+box-shadow: inset 0 1px 0 rgba(255,255,255,.5), inset 0 -1px 0 rgba(0,0,0,.2), 0 0 0 1px rg
+}
+.mode-btn {
+display: grid; grid-template-columns: 1fr 8px; gap: 8px; align-items: center;
+padding: 8px 10px;
+background: linear-gradient(180deg, #D4CCB6 0%, #BFB7A1 100%);
+border: none; border-radius: 4px; cursor: pointer;
+font: 500 10px/1 'IBM Plex Mono', monospace;
+letter-spacing: .18em; text-transform: uppercase;
+color: #1A1814; text-align: left;
+box-shadow:
+inset 0 1px 0 rgba(255,255,255,.6),
+inset 0 -2px 0 rgba(0,0,0,.22),
+0 1px 2px rgba(0,0,0,.18),
+0 0 0 1px rgba(0,0,0,.12);
+transition: transform 80ms, box-shadow 80ms;
+}
+.mode-btn:active { transform: translateY(2px); }
+.mode-btn.active { color: #C8442A; }
+.mode-btn .mled {
+width: 8px; height: 8px; border-radius: 50%;
+background: rgba(0,0,0,.18);
+box-shadow: inset 0 1px 1px rgba(0,0,0,.4);
+
+}
+.mode-btn.active .mled {
+background: #5FB97D;
+box-shadow: 0 0 6px rgba(95,185,125,.75);
+}
+
+Mobile (<720px): collapse to grid-template-columns: repeat(3, 1fr) and let it wrap to
+two rows.
+
+7.5 Channel buttons
+The channel buttons are the heart of the case-decision interaction. They have four states:
+
+State
+
+CSS
+class
+
+Visual
+Dim text, dim LED, label says — inactive — , cursor not-
+
+Inactive
+
+(default)
+
+Armed
+
+.armed
+
+Black text, red 01 numeral, amber LED pulsing, cursor pointer
+
+Picked
+
+.picked
+
+Red gradient background, ivory text, amber LED solid
+
+Dimmed
+
+.dimmed
+
+32% opacity, no animation
+
+allowed
+
+.channel-btn {
+display: grid; grid-template-columns: 26px 1fr 18px;
+align-items: center; gap: 12px;
+width: 100%; padding: 12px; margin-bottom: 8px;
+background: linear-gradient(180deg, #D4CCB6 0%, #BFB7A1 100%);
+border: none; border-radius: 4px; cursor: not-allowed;
+font-family: 'IBM Plex Mono', monospace;
+color: rgba(26,24,20,.55); text-align: left;
+box-shadow:
+inset 0 1px 0 rgba(255,255,255,.6),
+inset 0 -2px 0 rgba(0,0,0,.22),
+0 1px 2px rgba(0,0,0,.18),
+0 0 0 1px rgba(0,0,0,.12);
+transition: transform 80ms, box-shadow 80ms, color 200ms;
+}
+
+.channel-btn .ch-num { font-family: 'Major Mono Display'; font-size: 14px; color: rgba(26,24,
+.channel-btn .ch-label { font-size: 11px; line-height: 1.4; }
+.channel-btn .ch-led {
+width: 8px; height: 8px; border-radius: 50%;
+background: rgba(0,0,0,.18);
+
+box-shadow: inset 0 1px 1px rgba(0,0,0,.4);
+transition: all 200ms;
+}
+.channel-btn.armed { color: #1A1814; cursor: pointer; }
+.channel-btn.armed .ch-num { color: #C8442A; }
+.channel-btn.armed .ch-led {
+background: #E8A341;
+box-shadow: 0 0 6px rgba(232,163,65,.7);
+animation: armP 2.4s ease-in-out infinite;
+}
+@keyframes armP { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
+.channel-btn.armed:hover { background: linear-gradient(180deg, #DCD4BE 0%, #C8C0AA 100%); }
+.channel-btn.armed:active { transform: translateY(2px); }
+.channel-btn.picked {
+background: linear-gradient(180deg, #C8442A 0%, #8E2A18 100%);
+color: #F4E8D8; cursor: not-allowed;
+}
+.channel-btn.picked .ch-num { color: #F4E8D8; }
+.channel-btn.picked .ch-led {
+background: #FFC080;
+box-shadow: 0 0 8px rgba(255,192,128,.9);
+animation: none;
+}
+.channel-btn.dimmed { opacity: .32; cursor: not-allowed; }
+
+There are 4 channel buttons in the DOM. The 4th is display: none unless the current
+decision has 4 options (none in v1, but the engine should support it).
+
+7.6 Streak block + day progress
+Right-side block (above VU meters). Shows:
+Streak number in Major Mono 36px ( 07 DAYS ).
+Last-10-days dot trend (10 small dots, green if completed that day).
+Day progress: DAY 12 / 60 · WK 03 .
+.streak-block { background: #B0A892; border-radius: 6px; padding: 12px 14px;
+box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 0 0 1px rgba(0,0,0,.14); }
+
+.streak-display { font-family: 'Major Mono Display'; font-size: 36px; color: #1A1814; line-he
+
+.streak-display .units { font-family: 'IBM Plex Mono'; font-size: 9px; letter-spacing: .18em;
+.streak-trend { display: flex; gap: 3px; margin-top: 8px; }
+.streak-trend-dot { flex: 1; height: 8px; background: rgba(0,0,0,.18); border-radius: 1px; }
+
+.streak-trend-dot.on { background: #2E5C2A; }
+.day-progress { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(0,0,0,.15);
+font-size: 9px; color: #1A1814; letter-spacing: .18em; text-transform: uppercase; }
+.day-progress b { color: #C8442A; font-size: 13px; font-family: 'Major Mono Display'; }
+
+7.7 VU meters (domain strength)
+Twelve rows (one per domain). Each shows: number + 5-char domain name + 5-cell bar +
+n/5 value. Cells fill green when strength is high, red (“hot”) when low (≤2). The cell that
+
+corresponds to the active scenario’s domain gets a gold flash sequence on outcome.
+.vu-mini { padding: 4px 0; display: grid; grid-template-columns: 28px 1fr 32px; align-items:
+
+.vu-mini .num { font-family: 'Major Mono Display'; font-size: 11px; color: #1A1814; text-alig
+
+.vu-mini .name { font-family: 'IBM Plex Mono'; font-size: 9px; letter-spacing: .14em; text-tr
+.vu-mini .vu-bar { display: flex; gap: 1.5px; }
+
+.vu-mini .vu-cell { flex: 1; height: 9px; background: rgba(0,0,0,.18); border-radius: 1px; tr
+.vu-mini .vu-cell.on { background: #2E5C2A; }
+.vu-mini .vu-cell.on.hot { background: #C8442A; }
+.vu-mini .vu-cell.flash { animation: flsh 800ms ease-out; }
+@keyframes flsh {
+0% { background: #FFE680; box-shadow: 0 0 8px rgba(255,230,128,.9); }
+100% { background: #2E5C2A; }
+}
+
+.vu-mini .vu-val { font-family: 'Major Mono Display'; font-size: 11px; text-align: right; col
+
+On outcome of any case, call flashVU(domainNumber) — iterate cells with 50ms staggered
+delay, each gets .flash for 800ms.
+
+7.8 Primary button (engage / continue / eject)
+The most expressive control. Mechanical 6px depth that compresses to 2px on :active .
+Three color variants:
+Variant
+
+Use
+
+Red (default)
+
+Engage scenario
+
+Amber ( .amber )
+
+Continue advancing within a scenario
+
+Green ( .green )
+
+Eject / return home
+
+Disabled ( .disabled )
+
+While processing, briefing, awaiting channel select
+
+.primary-btn {
+
+display: block; width: 100%; padding: 22px;
+background: linear-gradient(180deg, #D43E1E 0%, #A02612 100%);
+color: #F4E8D8; font-family: 'Major Mono Display'; font-size: 18px;
+letter-spacing: .22em; border: none; border-radius: 6px;
+cursor: pointer; position: relative;
+text-shadow: 0 1px 0 rgba(0,0,0,.4);
+box-shadow:
+inset 0 1px 0 rgba(255,255,255,.28),
+inset 0 -1px 0 rgba(0,0,0,.3),
+0 6px 0 #5C1A0E,
+
+/* ← 6px mechanical depth */
+
+0 10px 18px rgba(0,0,0,.35),
+0 0 0 1px rgba(0,0,0,.18);
+transition: all 70ms;
+}
+.primary-btn::before { content: '▸ '; color: #FFC080; }
+.primary-btn:active {
+transform: translateY(4px);
+box-shadow:
+inset 0 1px 0 rgba(255,255,255,.18),
+inset 0 -1px 0 rgba(0,0,0,.3),
+0 2px 0 #5C1A0E,
+
+/* ← reduces to 2px */
+
+0 4px 8px rgba(0,0,0,.35),
+0 0 0 1px rgba(0,0,0,.18);
+}
+.primary-btn.disabled {
+background: linear-gradient(180deg, #6E5C50 0%, #4A3E36 100%);
+cursor: not-allowed; transform: none;
+box-shadow: inset 0 1px 0 rgba(255,255,255,.15), inset 0 -1px 0 rgba(0,0,0,.3),
+0 3px 0 #2A2218, 0 5px 10px rgba(0,0,0,.3);
+}
+.primary-btn.green {
+background: linear-gradient(180deg, #5FB97D 0%, #347A52 100%);
+box-shadow: inset 0 1px 0 rgba(255,255,255,.3), inset 0 -1px 0 rgba(0,0,0,.3),
+0 6px 0 #1E4A30, 0 10px 18px rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.18);
+}
+.primary-btn.amber {
+background: linear-gradient(180deg, #E8A341 0%, #B47E2C 100%);
+box-shadow: inset 0 1px 0 rgba(255,255,255,.3), inset 0 -1px 0 rgba(0,0,0,.3),
+0 6px 0 #6E4A1A, 0 10px 18px rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.18);
+color: #1A1814; text-shadow: 0 1px 0 rgba(255,255,255,.18);
+}
+
+7.9 Quantitative panel
+Used in case briefs that have math (EOQ, newsvendor, EVPI). Renders inside the LCD body,
+below the context table.
+
+.quant {
+margin-top: 14px; padding: 12px 14px;
+border: 1px solid rgba(255,192,128,.4);
+background: rgba(255,192,128,.05);
+position: relative; z-index: 3;
+}
+
+.quant .qh { font-family: 'Major Mono Display'; font-size: 9px; letter-spacing: .24em; color:
+.quant .formula { font-family: 'IBM Plex Serif'; font-style: italic; font-size: 18px; color:
+
+.quant .vars { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 12px; font-size:
+.quant .vars .v { color: #FFC080; font-weight: 600; }
+.quant .vars .d { color: rgba(184,224,144,.85); }
+.quant .vars .n { color: #C8F0A0; text-align: right; font-weight: 500; }
+
+.quant .result { margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(255,192,128,.
+
+Renders the formula header — THE MATH — , then formula in italic serif, then variables grid
+(variable, description, value), then the result line.
+
+7.10 Framework card
+Used in the home view (always shows day’s framework) and at the end of every debrief.
+.fwk {
+margin-top: 14px; padding: 14px;
+border: 1px solid rgba(184,224,144,.3);
+background: rgba(184,224,144,.04);
+}
+
+.fwk .fh { font-family: 'Major Mono Display'; font-size: 9px; letter-spacing: .24em; color: r
+
+.fwk .fname { font-family: 'IBM Plex Serif'; font-size: 18px; color: #C8F0A0; line-height: 1.
+
+.fwk .forig { font-family: 'IBM Plex Serif'; font-style: italic; font-size: 13px; color: rgba
+.fwk .fbody { font-size: 12.5px; line-height: 1.55; color: rgba(184,224,144,.9); }
+
+.fwk .fread { margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(184,224,144,.2
+
+.fwk .fread .l { color: #FFC080; font-style: normal; letter-spacing: .18em; font-size: 9px; m
+
+Header is — FRAMEWORK — . Then framework name, originator italic, summary, dashed-rule,
+citation prefixed with CITE .
+
+7.11 Curriculum grid
+Twelve weeks stacked vertically. Each week has a left label ( WEEK 03 / INVENTORY ) and a
+right grid of 5 day-cards.
+.curr-grid { display: flex; flex-direction: column; gap: 12px; }
+.curr-week { display: grid; grid-template-columns: 110px 1fr; gap: 14px; align-items: start;
+
+.curr-week-h { font-family: 'Major Mono Display'; font-size: 11px; color: #FFC080; letter-spa
+
+.curr-week-h .wt { display: block; font-size: 9px; color: rgba(184,224,144,.6); margin-top: 4
+.curr-days { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.curr-day {
+display: grid; grid-template-rows: auto 1fr auto; gap: 4px;
+padding: 8px 9px; min-height: 90px;
+border: 1px solid rgba(184,224,144,.18);
+background: rgba(184,224,144,.03);
+cursor: pointer; transition: all 200ms;
+}
+.curr-day:hover { background: rgba(184,224,144,.1); border-color: rgba(184,224,144,.4); }
+.curr-day.today { border-color: #FFC080; background: rgba(255,192,128,.08); }
+.curr-day.completed { border-color: rgba(95,185,125,.5); }
+.curr-day .dnum { font-family: 'Major Mono Display'; font-size: 11px; color: #FFC080; }
+.curr-day .dttl { font-size: 9.5px; line-height: 1.25; color: #B8E090; }
+
+.curr-day .dstat { font-size: 8px; letter-spacing: .18em; color: rgba(184,224,144,.55); text.curr-day.today .dstat { color: #FFC080; }
+.curr-day.completed .dstat { color: #C8F0A0; }
+
+Day card content:
+Top: D03 or D03 · CASE (if scenario)
+Mid: short title (truncates with line-height limit, no ellipsis needed)
+Bottom: status — TODAY / READ (lecture done) / 87% (case accuracy) / MISSED /
+LOCKED
+
+Click any day → sets currentDay = d , persists, returns to home.
+
+7.12 Glossary grid
+.glos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; }
+
+.glos-row { padding: 6px 0; border-bottom: 1px dashed rgba(184,224,144,.15); display: grid; g
+.glos-row .term { font-weight: 600; color: #FFC080; font-size: 11px; }
+.glos-row .def { font-size: 11.5px; line-height: 1.45; color: rgba(184,224,144,.85); }
+
+Mobile: collapse to single column.
+
+7.13 Reading list
+.read-list { display: flex; flex-direction: column; gap: 8px; }
+.read-row {
+padding: 10px 12px;
+border: 1px solid rgba(184,224,144,.18);
+background: rgba(184,224,144,.03);
+
+display: grid; grid-template-columns: 60px 1fr auto; gap: 12px;
+align-items: baseline;
+}
+.read-row .day-mark { font-family: 'Major Mono Display'; font-size: 11px; color: #FFC080; }
+
+.read-row .citation { font-family: 'IBM Plex Serif'; font-size: 13px; color: #B8E090; line-he
+.read-row .citation b { color: #C8F0A0; font-style: normal; }
+.read-row .citation em { color: rgba(184,224,144,.85); font-style: italic; }
+
+.read-row .citation .topic { display: block; font-family: 'IBM Plex Mono'; font-size: 10px; l
+.read-row .tier {
+font-family: 'IBM Plex Mono'; font-size: 9px; color: #FFC080;
+letter-spacing: .18em; padding: 2px 6px;
+border: 1px solid rgba(255,192,128,.4); height: max-content;
+}
+.read-row .tier.canon { color: #C8F0A0; border-color: rgba(95,185,125,.5); }
+
+Format: D{day} {Author. "Work." Publisher. — topic} [TIER] .
+
+7.14 Command palette overlay
+Triggered by ⌘K (or Ctrl+K) or the Cmd mode button. Full-screen overlay with backdrop
+blur. Inside: a single input + a scrollable filtered list of commands grouped by section.
+.palette-overlay {
+position: fixed; inset: 0;
+background: rgba(0,0,0,.72);
+backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+z-index: 200;
+display: flex; align-items: flex-start; justify-content: center;
+padding: 12vh 16px 0;
+opacity: 0; pointer-events: none;
+transition: opacity 240ms;
+}
+.palette-overlay.open { opacity: 1; pointer-events: auto; }
+.palette {
+width: min(680px, 100%);
+background: #0E1F0C;
+border-radius: 8px;
+border: 1px solid rgba(184,224,144,.4);
+box-shadow: 0 30px 60px rgba(0,0,0,.7);
+font-family: 'IBM Plex Mono'; color: #B8E090;
+overflow: hidden; position: relative;
+}
+.palette::before { /* scan lines, same as LCD */
+content: ''; position: absolute; inset: 0;
+
+background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0) 0, rgba(0,0,0,0) 2px, rgba(
+pointer-events: none; z-index: 1;
+
+}
+.palette-input-row {
+display: grid; grid-template-columns: auto 1fr auto;
+gap: 12px; align-items: center;
+padding: 18px 22px;
+border-bottom: 1px dashed rgba(184,224,144,.2);
+position: relative; z-index: 2;
+}
+.palette-input-row .prompt { color: #FFC080; font-size: 14px; }
+.palette-input-row input {
+background: transparent; border: none; outline: none;
+color: #C8F0A0; font: inherit; font-size: 15px;
+}
+
+.palette-input-row .esc { font-size: 9px; letter-spacing: .18em; color: rgba(184,224,144,.5);
+
+.palette-results { max-height: 60vh; overflow-y: auto; padding: 8px 0; position: relative; z.palette-section { font-family: 'Major Mono Display'; font-size: 9px; letter-spacing: .24em;
+.palette-item { display: grid; grid-template-columns: 32px 1fr auto; gap: 12px; align-items:
+.palette-item .glyph { color: #FFC080; font-family: 'Major Mono Display'; font-size: 11px; }
+.palette-item:hover, .palette-item.active { background: rgba(184,224,144,.1); }
+
+.palette-item .hint { color: rgba(184,224,144,.45); font-size: 10px; letter-spacing: .14em; }
+.palette-item .sub { color: rgba(184,224,144,.55); font-size: 11px; margin-left: 8px; }
+
+Commands:
+Section
+
+Glyph
+
+Label
+
+Action
+
+GO
+
+◆
+
+Engage today’s
+
+Engage if day is a case and not yet done;
+
+case/lecture
+
+else open home
+
+GO
+
+▤
+
+Open Curriculum ( C )
+
+viewCurr()
+
+GO
+
+▣
+
+Open Glossary ( G )
+
+viewGlos()
+
+GO
+
+▥
+
+GO
+
+▴
+
+JUMP
+
+DANGER
+
+D01 –
+D60
+
+⌫
+
+Open Reading List
+(R)
+
+viewRead()
+
+Return Home ( H )
+
+viewHome()
+
+(each curriculum day)
+
+Set currentDay = d , return home
+
+Reset all progress
+( CONFIRM )
+
+confirm() then resetState()
+
+Match string for filtering: concatenate match + ' ' + label and lowercase-includes the
+
+query. Default sort preserves array order.
+Keyboard inside palette:
+↑ / ↓ move active selection
+Enter invokes active item
+Esc closes
+
+8 · Persistence layer
+8.1 localStorage key
+'scfc-masters-v2'
+
+8.2 Schema
+type State = {
+version: 2;
+streak: number;
+
+// current consecutive-day streak
+
+currentDay: number;
+
+// 1..60
+
+lastCompletedDate: string | null;
+
+// ISO date 'YYYY-MM-DD'
+
+completions: Completion[];
+
+// most-recent first, capped at 80
+
+domains: Record<number, { strength: number }>;
+
+// 1..12 → 0..5
+
+};
+type Completion = {
+dayNum: number;
+scenarioId: string;
+
+// day title (e.g. "EOQ · ECONOMIC ORDER QTY")
+
+date: string;
+
+// ISO date
+
+picks: number[];
+
+// option indices, in order
+
+score: number;
+
+// sum of option scores
+
+accuracy: number;
+
+// 0..100, % of optimal picks
+
+verdicts: ('good'|'warn'|'bad'|'lecture')[];
+isLecture: boolean;
+};
+
+8.3 Migration
+If loadState() finds a v1 schema (from 'scfc-machine-v1' ), do not migrate. The v2
+program is a different curriculum. Initialize fresh state. (Optional: read v1 and warn the user
+that progress can be reset; not required.)
+
+8.4 Load / Save / Reset
+function loadState() {
+try {
+const raw = localStorage.getItem('scfc-masters-v2');
+if (!raw) return defaultState();
+return Object.assign(defaultState(), JSON.parse(raw));
+} catch (e) { return defaultState(); }
+}
+function saveState() {
+try { localStorage.setItem('scfc-masters-v2', JSON.stringify(state)); }
+catch (e) { /* swallow quota errors silently */ }
+}
+function resetState() {
+state = defaultState();
+saveState();
+}
+function defaultState() {
+return {
+version: 2,
+streak: 0,
+currentDay: 1,
+lastCompletedDate: null,
+completions: [],
+domains: Object.fromEntries(DOMAINS.map(d => [d.n, { strength: 0 }]))
+};
+}
+
+8.5 Streak rules
+on completion (case OR lecture):
+today = today's ISO date
+if state.lastCompletedDate === today:
+
+// already counted today → no change
+
+skip
+else if state.lastCompletedDate is yesterday:
+streak += 1
+else if state.lastCompletedDate is null:
+streak = 1
+else:
+streak = 1
+lastCompletedDate = today
+
+8.6 Domain strength rules
+
+// gap of 2+ days
+
+on completion:
+if isLecture:
+strength += 0.5
+
+(cap at 5)
+
+else (case):
+if accuracy >= 80: strength += 1 (cap at 5)
+else if accuracy < 40: strength -= 1 (floor at 0)
+else: no change
+
+8.7 Day advance
+on completion (case):
+if state.currentDay === activeDay.d AND state.currentDay < 60:
+state.currentDay += 1
+on completion (lecture):
+if state.currentDay === activeDay.d AND state.currentDay < 60:
+state.currentDay += 1
+
+This ensures replays from the curriculum grid (loading a past day) don’t accidentally
+advance the program.
+
+8.8 Completions cap
+Keep most-recent 80 completions. Older ones drop off. (Streak and domain strengths are
+aggregated separately; losing old completions doesn’t affect them.)
+
+9 · Scenario engine implementation
+9.1 Typewriter
+let _typingTimer = null;
+let _typingSkip = false;
+function appendLine(text, cls = '', cb) {
+const line = document.createElement('span');
+line.className = 'lcd-line ' + cls;
+lcdBody.appendChild(line);
+if (!text || text.trim() === '') {
+if (cb) setTimeout(cb, 40);
+return;
+}
+
+let i = 0;
+const cursor = document.createElement('span');
+cursor.className = 'cursor';
+line.appendChild(cursor);
+function step() {
+if (_typingSkip) {
+cursor.remove();
+line.textContent = text;
+if (cb) cb();
+return;
+}
+if (i < text.length) {
+cursor.before(document.createTextNode(text[i]));
+i++;
+_typingTimer = setTimeout(step, 10 + Math.random() * 8);
+} else {
+cursor.remove();
+if (cb) cb();
+}
+}
+step();
+}
+function clearLCD() {
+lcdBody.innerHTML = '';
+if (_typingTimer) { clearTimeout(_typingTimer); _typingTimer = null; }
+_typingSkip = false;
+}
+
+9.2 Channel arming
+function setChannels(options, locked = false) {
+channels.forEach((btn, idx) => {
+const opt = options && options[idx];
+if (opt) {
+btn.style.display = '';
+btn.classList.remove('picked', 'dimmed');
+btn.classList.toggle('armed', !locked);
+btn.querySelector('.ch-label').textContent = opt.l;
+btn.dataset.optIdx = idx;
+} else {
+btn.style.display = idx < 3 ? '' : 'none';
+btn.classList.remove('armed', 'picked', 'dimmed');
+btn.querySelector('.ch-label').textContent = '— inactive —';
+
+}
+});
+// arm LEDs
+if (options && options.length && !locked) {
+armLED.classList.add('on');
+chanArmLED.classList.add('on');
+armPair.style.opacity = '1';
+} else {
+armLED.classList.remove('on');
+chanArmLED.classList.remove('on');
+armPair.style.opacity = '0.5';
+}
+}
+
+9.3 Decision flow (pseudocode)
+engage(day):
+state.view = 'briefing'
+setMode('case.brief')
+setMeta('— TRANSMITTING —')
+clearLCD()
+setPrimary('— BRIEFING —', null, disabled=true)
+setChannels(null)
+appendTitle(day.t)
+appendDivider()
+appendLine('// ' + day.scn.tp, 'amber', after =>
+appendLine(day.scn.pre, '', after =>
+forEach line in day.scn.sl:
+appendLine(line.text, line.cls)
+after all lines:
+appendCtx(day.scn.ctx)
+if day.scn.qt: appendQuant(day.scn.qt)
+appendLine('// brief complete. press CONTINUE.', 'green-bold')
+setPrimary('CONTINUE
+
+TO
+
+DECISION', 'amber', disabled=false)
+
+primaryBtn.onclick = () => goDecision(0)
+)
+)
+goDecision(idx):
+state.view = 'scn'
+state.currentDecision = idx
+d = activeDay.scn.dec[idx]
+setMode('await.decision')
+setMeta('— ' + d.p + ' —')
+clearLCD()
+setPrimary('— AWAITING CHANNEL SELECT —', null, disabled=true)
+
+appendLine('// ' + d.p, 'amber')
+appendTitleSmall(d.q)
+
+// smaller title size
+
+appendLine('// review options on channel selector.', 'dim')
+appendLine('// press the lit channel to commit.', 'dim')
+setChannels(d.o)
+for each btn in channels:
+if btn.classList.contains('armed'):
+btn.onclick = () => commitOption(parseInt(btn.dataset.optIdx))
+commitOption(optIdx):
+d = activeDay.scn.dec[currentDecision]
+opt = d.o[optIdx]
+picks.push(optIdx)
+scoreLog.push({verdict: opt.v, score: opt.s, label: opt.l})
+dimChannelsExcept(optIdx)
+setPrimary('— PROCESSING —', null, disabled=true)
+appendLine('// decision recorded. cycling registers...', 'dim')
+setTimeout(700, () => {
+cls = good→green-bold | bad→red | warn→amber
+appendLine('// VERDICT: ' + opt.v.toUpperCase() + '
+
+SCORE: ' + signedScore(opt.s), cls)
+
+flashVU(activeDay.dom)
+appendLine('// — consequence —', 'dim')
+appendLine('// ' + opt.c.toLowerCase(), '')
+if opt.n is a number:
+setPrimary('CONTINUE
+
+TO
+
+DECISION ' + pad(opt.n+1), 'amber')
+
+primaryBtn.onclick = () => goDecision(opt.n)
+else:
+setPrimary('CONTINUE
+
+TO
+
+DEBRIEF', 'amber')
+
+primaryBtn.onclick = goDebrief
+})
+goDebrief():
+state.view = 'debrief'
+totalScore = sum(scoreLog.score)
+optimalCount = picks.zip(activeDay.scn.opt).count(equal)
+accuracy = round(optimalCount / picks.length * 100)
+if not isReplay and not isCompletedToday(activeDay.d):
+recordCompletion(activeDay, picks, totalScore, accuracy, scoreLog.verdicts, false)
+if state.currentDay === activeDay.d and state.currentDay < 60:
+state.currentDay += 1
+saveState()
+refreshChrome()
+appendTitle('PATH TAKEN.')
+for log in scoreLog:
+mark = good→✓ | bad→✗ | warn→~
+appendLine('// ' + mark + ' D0' + i + '
+appendDivider()
+
+' + log.label + '
+
+(' + signed(log.score) + ')',
+
+appendLine('// SCORE
+
+' + signed(totalScore), scoreCls)
+
+appendLine('// ACCURACY
+
+' + accuracy + '%
+
+appendLine('// DOMAIN
+
+' + DOMAINS[activeDay.dom-1].name, 'dim')
+
+(' + optimalCount + '/' + picks.length + ' op
+
+if isReplay: appendLine('// (review · stats unchanged)', 'dim')
+appendDivider()
+appendLine('// PRINCIPAL FRAMING', 'amber')
+appendLine(activeDay.scn.fr, 'green-bold')
+appendDivider()
+appendFwk(activeDay)
+setPrimary('EJECT
+
+·
+
+RETURN
+
+HOME', 'green')
+
+primaryBtn.onclick = viewHome
+
+10 · Keyboard, accessibility, mobile
+10.1 Keyboard map
+Key
+
+Where
+Anywhere except inside
+
+H
+
+palette/input
+
+Action
+Home view
+
+C
+
+Anywhere except input
+
+Curriculum view
+
+G
+
+Anywhere except input
+
+Glossary view
+
+R
+
+Anywhere except input
+
+Reading list view
+
+⌘K / Ctrl+K
+
+Anywhere
+
+Open palette
+
+Esc
+
+Inside palette
+
+Close palette
+
+1 / 2 / 3 /
+4
+
+View === ‘scn’ (decision)
+
+Commit corresponding channel if
+armed
+
+Enter
+
+View === ‘home’
+
+Click primary button
+
+↑ / ↓
+
+Inside palette
+
+Move active item
+
+Enter
+
+Inside palette
+
+Invoke active item
+
+10.2 Focus management
+When palette opens: focus the input.
+
+When palette closes: do not steal focus back to anything specific.
+When a channel button is armed: it is keyboard-tabbable.
+When a channel button is dimmed/picked: not tabbable.
+
+10.3 Mobile breakpoints
+Breakpoint
+
+Changes
+.machine padding 18px · nameplate stacks ( grid-template-columns: 1fr )
+
+· mode-row collapses to repeat(3, 1fr) (wraps to 2 rows) · LCD min-height
+≤720px
+
+320px · LCD body 12.5px · controls-row stacks · primary-btn 18px font ·
+stats/glossary single column · curr-week stacks · curr-days repeat(2, 1fr) ·
+read-row 50px+1fr (tier wraps below)
+
+10.4 Accessibility
+Buttons are <button> elements (not divs).
+The LCD is a <div> with aria-live="polite" so screen readers announce typed
+content.
+Channel buttons get aria-disabled="true" when not armed.
+The palette input has aria-label="Command palette" .
+Color is not the only verdict signal: text says VERDICT: GOOD / BAD / WARN explicitly.
+
+11 · File structure
+11.1 Single-file build (recommended for v1)
+/dist/
+index.html
+
+(everything inline)
+
+Inline order inside <head> : meta, title, font preconnect+stylesheet, <style> . Inline order
+inside <body> : .machine panel, palette overlay, <script> block.
+Total target: < 110 KB. The reference implementation is ~105 KB.
+
+11.2 Split-file build (acceptable alternative)
+
+/dist/
+index.html
+app.css
+data.js
+
+(DOMAINS, CURRICULUM, GLOSSARY, READING, exported as window.SCFC_DATA)
+
+app.js
+
+Load order in index.html :
+<link rel="stylesheet" href="app.css">
+<script src="data.js"></script>
+<script src="app.js" defer></script>
+
+No bundler. No transpiler. Plain ES2018 in modern browsers. No JSX, no TypeScript. (Spec
+is in TS but implementation is JS.)
+
+11.3 Fonts
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&f
+
+11.4 Deployment
+Static hosting. Any of: GitHub Pages, Vercel, Netlify, S3+CloudFront, plain Apache. No
+server-side requirements. Single HTML file works as a local file ( file:// ).
+
+12 · Acceptance criteria
+The build passes when every item below is observably true.
+
+12.1 Visual fidelity
+Panel renders with putty/aluminum gradient background.
+Four corner screws visible with diagonal slots.
+Hairline ridge texture overlays the panel surface (visible at close zoom).
+Nameplate shows SCFC—II / Masters Program · 60-Day Curriculum .
+Mode row has 5 buttons: Today / Curr / Gloss / Read / Cmd.
+LCD has visible scan lines (every ~3px).
+
+LCD has subtle flicker animation that does not distract.
+Cursor blinks while typewriter is active; disappears when line completes.
+Primary button has 6px mechanical depth at rest; compresses to 2px on press.
+Three primary-button color variants (red/amber/green) all render correctly.
+Streak block shows a 10-dot trend strip; dots are green for completed days.
+VU meters show 12 rows, one per domain, with 5-cell bars.
+
+12.2 Curriculum
+Day 1 loads on first run.
+All 60 days are reachable from the curriculum grid.
+Curriculum grid groups days by week with the domain label visible.
+At least 12 days are full case scenarios (1, 7, 11, 12, 16, 19, 20, 21, 28, 36, 39, 41, 47, 53).
+All 48+ lecture days render the framework card and the “Mark Lecture Complete”
+button.
+
+12.3 Case scenario flow
+Engaging a case types out the brief letter-by-letter.
+Clicking the LCD mid-typing fast-forwards remaining lines.
+The context table renders below the brief.
+Quantitative panels render for cases that have one (Day 11, 12, 47).
+Continue advances to the first decision.
+Channel buttons arm (amber LED pulse) when a decision is presented.
+Pressing a channel button dims the others and shows the verdict.
+VU meter for the current domain flashes gold cells in sequence on outcome.
+Options with a .n field route to that decision; otherwise route to debrief.
+Debrief shows path taken, total score, accuracy, principal framing, framework card.
+Eject returns to home and currentDay advances by 1 (unless at day 60).
+
+12.4 Lecture flow
+
+Lecture days show framework card on the home view.
+“Mark Lecture Complete” button is visible.
+Pressing it advances currentDay and increments domain strength by 0.5.
+
+12.5 Persistence
+Completing a day persists state in localStorage under key scfc-masters-v2 .
+Reloading the page returns to the same currentDay .
+Streak increments correctly on consecutive-day completion.
+Streak resets to 1 when a day is skipped.
+Domain strengths persist and update per §8.6.
+Reset palette command clears state and returns to Day 1 with streak 0.
+
+12.6 Replay
+Loading a previously-completed day from the curriculum grid shows the prior debrief
+(no double-counting).
+Replay does not modify streak, completions, or domain strengths.
+
+12.7 Glossary & Reading
+All 50 glossary terms render in 2 columns (1 column on mobile).
+All 22 reading list entries render with tier badges (CANON green / CORE amber).
+Reading list entries link conceptually to days (day mark visible on each row).
+
+12.8 Palette
+⌘K (or Ctrl+K ) opens the palette from any view.
+
+Typing filters commands.
+Arrow keys move active item.
+Enter invokes active item.
+Esc closes the palette.
+Reset command shows a confirmation dialog before destroying state.
+All 60 days appear in the JUMP section.
+
+12.9 Keyboard
+H / C / G / R switch views.
+1 / 2 / 3 / 4 commit channel during a decision.
+Enter triggers the primary button on home.
+
+12.10 Mobile
+Panel is readable and usable on a 375px-wide screen.
+Mode row wraps to 2 rows on narrow viewports.
+Channel column stacks above side-controls on narrow viewports.
+Curriculum grid collapses to 2-column day cards on narrow viewports.
+No horizontal scroll on any view.
+
+12.11 Performance
+First paint < 500ms on cold load (assuming fonts load).
+Typewriter does not block the main thread (uses setTimeout ).
+No console errors in any view.
+No 4xx/5xx network calls (except optional Google Fonts).
+
+13 · Out of scope
+The following are explicitly not part of this build:
+Multi-user support, accounts, login, sync.
+Server-side anything.
+Adaptive AI coaching (use generated content). All scenarios are authored.
+Spaced repetition / forgetting curve scheduling.
+Audio, sound effects.
+Animated illustrations beyond the LCD typewriter, VU flash, and button states.
+A “tutorial” or onboarding flow. The interface is the tutorial.
+A “share my progress” button.
+
+Print-to-PDF / export of the curriculum.
+Gamification beyond streak and domain strength (no badges, levels, unlocks).
+A “settings” panel. There are no settings.
+If the user requests any of the above, defer to a v3 spec. Do not bolt them on.
+
+14 · Future work (v3 ideas; do not build now)
+Author the remaining 48 lecture days as full cases. This is mostly an authoring effort,
+not engineering.
+Add note-taking: a small pencil icon beside each framework card opens a textarea
+persisted to localStorage. User notes per day.
+Add Anki-style spaced retrieval: at end of each week, present a 3-question retrieval
+drill from prior weeks’ cases.
+Add export-to-clipboard: a palette command to copy current debrief to clipboard for
+sharing.
+Add PWA manifest so it can be installed as a homescreen app. (Service worker, offline
+caching, install prompt.)
+Add a printable PDF of the curriculum and reading list for users who want a study
+guide.
+Add a separate dashboard view that’s the existing Stats view from v1 — 30-day
+calendar dot grid, accuracy trends.
+
+15 · Reference implementation
+A working reference exists at scfc-masters.html . It implements every section of this spec.
+When in doubt, mirror its behavior. Where this spec and the reference disagree, this spec
+wins.
+The reference also contains the full data inline; an agent rebuilding from this spec should be
+able to produce a byte-identical-feeling product without the reference (the reference is a
+sanity check, not a source of truth).
+
+16 · Definition of done
+The build is done when:
+1. Every checkbox in §12 passes.
+2. The product loads and works as a single HTML file (or a minimal split per §11.2).
+3. All 60 days are reachable; all 12+ cases are playable end-to-end.
+4. State persists across page reloads.
+5. The visual design matches §5 and §7 closely enough that a designer reviewing both
+side-by-side would not flag the new build as “off-brand.”
+6. The user can complete a full session (engage → brief → decisions → outcome → debrief
+→ eject) on both desktop and a 375px-wide mobile screen without friction.
+That’s the bar. Build to it.
+
+

@@ -1,0 +1,42 @@
+[REX]
+Welcome back to SCFC. Today is day 42, and the framework is Single Point of Failure.
+[pause]
+The short title is SPOF ANALYSIS. This is a supply chain fluency episode, so the goal is not to memorize a label. The goal is to hear the framework, understand the decision it changes, and know what a principal-level operator would do with it under pressure.
+
+[ARA]
+The originator context is Kleindorfer & Saad (2005). The canonical citation is Kleindorfer, P. R. & Saad, G. H. “Managing Disruption Risks in Supply Chains.” POMS 14(1), 2005.
+That matters because supply chain work is full of inherited language. People repeat terms like inventory policy, resilience, sourcing leverage, and network design without remembering the problem those terms were built to solve. The canon gives us a disciplined starting point. It keeps the conversation from becoming opinion dressed up as strategy.
+
+[REX]
+Here is the intuition. Map dependencies. Where one node’s failure cascades, you have a SPOF. Most firms have 2–4 they don’t see.
+Put more plainly: the framework is a lens for deciding where to spend attention. In operations, attention is scarce. You cannot optimize every supplier, SKU, route, contract term, and planning exception at the same time. A good framework compresses the problem without flattening it. It tells you what information matters first, which constraint is probably binding, and which action is likely to create leverage.
+
+[ARA]
+The mechanics are practical: name the framework, identify the binding tradeoff, quantify what matters, then choose the operating move. If there is math in the day, use it as a decision lens, not as decoration.
+Start by writing the current state in one sentence. Then name the decision owner. Then name the tradeoff. Cost against service. Flexibility against price. Resilience against working capital. Forecast accuracy against planning latency. Compliance against throughput. Once the tradeoff is visible, the framework starts doing useful work. It separates the number you can defend from the number that is merely convenient.
+
+[REX]
+Now connect that to the system. A supply chain is not a spreadsheet with trucks attached. It is a set of commitments across time: demand promises, purchase commitments, capacity reservations, logistics lanes, inventory buffers, quality controls, payment terms, and executive expectations. When one part of the system changes, the impact travels. SPOF ANALYSIS helps you see that travel path before it becomes an escalation.
+
+[ARA]
+
+
+For a listener, the question is: what would you do on Monday morning? You would not announce that you know the framework. You would use it to structure the next meeting. You would ask for the missing variable. You would put the tradeoff on one page. You would tell finance what assumption drives the answer. You would tell operations what action changes the constraint. You would tell suppliers what behavior will now be measured.
+
+[REX]
+The failure mode is treating SPOF ANALYSIS as vocabulary. The senior operator asks what decision the framework changes, who owns the constraint, and what would change the answer.
+The common mistake is premature prescription. Someone hears a symptom and reaches for the familiar move: dual source it, add safety stock, renegotiate the contract, expedite the freight, install software, or escalate to leadership. Those moves may be right, but not because they are familiar. They are right only if they match the constraint. The principal does not reward activity. The principal rewards fit.
+
+[ARA]
+The principal's move: translate the framework into a recommendation that finance, operations, and suppliers can all act on.
+
+The recommendation should be plain enough to survive the next room. It should include the decision, the reason, the metric, the owner, and the trigger for revisiting the answer. If the answer would change when demand variance doubles, say that. If it would change when lead time stabilizes, say that. If it depends on a supplier assumption, say that. A recommendation without triggers is a slogan.
+
+[ARA]
+One final check: teach it back in ordinary language. If you cannot explain the framework without the jargon, you probably do not own it yet. If you can explain it to finance, operations, and a supplier in the same five minutes, you are close. That is the SCFC standard for fluency.
+
+
+
+[REX]
+Tomorrow: BUSINESS CONTINUITY.
+Until then, keep the discipline: framework first, math where it matters, action only after the constraint is named.

@@ -1,0 +1,34 @@
+{
+  "name": "Ontology System",
+  "version": "0.1.0",
+  "runtime": [
+    "index.html",
+    "public/favicon.svg",
+    "src/main.tsx",
+    "src/OntologyApp.tsx",
+    "src/ontologyTypes.ts",
+    "src/defaultOntologyScene.ts",
+    "src/ontologyStore.ts",
+    "src/sceneHash.ts",
+    "src/styles.css"
+  ],
+  "architecture": {
+    "frontend": "React + TypeScript + Vite",
+    "renderer": "Live SVG and DOM with CSS transforms",
+    "editing": "Typed scene data with inline editable text targets",
+    "sharing": "Compressed full scene document in URL hash",
+    "export": "Client-side retina PNG via html-to-image",
+    "deployment": "static"
+  },
+  "clientSideOnly": true,
+  "verification": {
+    "command": "npm run verify",
+    "checks": [
+      "TypeScript and Vite production build",
+      "SVG renderer present and canvas/WebGL absent",
+      "Inline edit, undo/redo, readonly share, and editable copy",
+      "Guided presentation transform changes",
+      "Retina PNG export download"
+    ]
+  }
+}

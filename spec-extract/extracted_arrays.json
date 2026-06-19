@@ -1,0 +1,686 @@
+{
+  "base_glossary": [
+    [
+      "TCO",
+      "Total Cost of Ownership — full lifecycle cost: acquisition, possession, transformation, disposal."
+    ],
+    [
+      "CODP",
+      "Customer Order Decoupling Point — where you commit to specific demand (MTS / MTO / ATO / ETO)."
+    ],
+    [
+      "ABC",
+      "Pareto-based SKU classification: A items (~80% value), B (~15%), C (~5%)."
+    ],
+    [
+      "MAD/RMSE/MAPE",
+      "Forecast error metrics: Mean Absolute Deviation, Root Mean Squared Error, Mean Absolute Percent Error."
+    ],
+    [
+      "BULLWHIP",
+      "Demand variance amplification upstream. 4 causes: signal processing, rationing, batching, price fluctuation."
+    ],
+    [
+      "S&OP",
+      "Sales & Operations Planning — monthly executive cadence aligning demand, supply, and finance."
+    ],
+    [
+      "CROSTON",
+      "Forecast method for intermittent demand; decouples size and inter-arrival time."
+    ],
+    [
+      "BASS MODEL",
+      "New-product diffusion with innovation (p) and imitation (q) coefficients."
+    ],
+    [
+      "EOQ",
+      "Economic Order Quantity. Q* = √(2DS/H). Robust because cost curve is flat near optimum."
+    ],
+    [
+      "NEWSVENDOR",
+      "Single-period stocking under uncertain demand. Optimal quantile = Cu / (Cu + Co)."
+    ],
+    [
+      "SAFETY STOCK",
+      "Inventory beyond cycle stock to absorb variance. SS = z · σ."
+    ],
+    [
+      "METRIC",
+      "Multi-Echelon Technique for Recoverable Item Control. Pools risk across nodes."
+    ],
+    [
+      "CSL / FILL RATE",
+      "Cycle Service Level (P[no stockout]) vs Fill Rate (E[fraction filled])."
+    ],
+    [
+      "KRALJIC",
+      "2×2 spend segmentation by supply risk × profit impact: Routine, Leverage, Bottleneck, Strategic."
+    ],
+    [
+      "TCE",
+      "Transaction Cost Economics — Williamson's framework for make-vs-buy via asset specificity."
+    ],
+    [
+      "SUPPLIER TIERING",
+      "Strategic vs transactional segmentation. Different tiers warrant different relationship investment."
+    ],
+    [
+      "DUAL SOURCING",
+      "Splitting volume across two suppliers. Trades unit price for disruption-cost insurance."
+    ],
+    [
+      "REVERSE AUCTION",
+      "Buyer-side competitive bidding. Works only for commoditized, multi-bidder, low-switch categories."
+    ],
+    [
+      "BATNA",
+      "Best Alternative To a Negotiated Agreement. Your walk-away. Never reveal it."
+    ],
+    [
+      "ZOPA",
+      "Zone Of Possible Agreement. Overlap between buyer and seller reservation prices."
+    ],
+    [
+      "REVENUE SHARING",
+      "Contract aligning supplier compensation to buyer realization (Cachon-Lariviere)."
+    ],
+    [
+      "QF CONTRACT",
+      "Quantity Flexibility — pre-commit baseline + paid options for variation (Tsay)."
+    ],
+    [
+      "BUYBACK",
+      "Supplier repurchase of unsold inventory at fraction of cost (Pasternack)."
+    ],
+    [
+      "OPEN-BOOK",
+      "Cost transparency between buyer and supplier. Margin becomes negotiated, not guessed."
+    ],
+    [
+      "POEM",
+      "Procurement & Operations Excellence Model — A.T. Kearney supplier maturity curve."
+    ],
+    [
+      "FMEA",
+      "Failure Mode & Effects Analysis. RPN = Severity × Occurrence × Detection."
+    ],
+    [
+      "p-MEDIAN",
+      "Facility location formulation: minimize weighted distance from demand to facilities."
+    ],
+    [
+      "CROSS-DOCK",
+      "Distribution facility with no inventory holding; flow-through only."
+    ],
+    [
+      "VRP",
+      "Vehicle Routing Problem. NP-hard combinatorial optimization for multi-stop routes."
+    ],
+    [
+      "INDEX-LINKED",
+      "Contract pricing tied to a published commodity index. Self-adjusting as market moves."
+    ],
+    [
+      "BASIS RISK",
+      "Mismatch between hedge instrument and physical exposure. Residual risk after hedging."
+    ],
+    [
+      "ALL-UNITS",
+      "Volume discount applied retroactively to all units when threshold is crossed."
+    ],
+    [
+      "RESILIENCE",
+      "Sheffi: redundancy (slow/expensive) vs flexibility (fast/cheap)."
+    ],
+    [
+      "SPOF",
+      "Single Point of Failure. A node whose disruption cascades to system collapse."
+    ],
+    [
+      "RTO / RPO",
+      "Recovery Time / Recovery Point Objectives. The two BCP numbers."
+    ],
+    [
+      "SBOM",
+      "Software Bill of Materials. Cyber supply chain transparency."
+    ],
+    [
+      "EVPI",
+      "Expected Value of Perfect Information. Maximum justifiable spend on info improvement."
+    ],
+    [
+      "EVII",
+      "Expected Value of Imperfect Information. EVPI scaled by quality."
+    ],
+    [
+      "TORNADO",
+      "Sensitivity diagram showing variables ranked by impact on outcome."
+    ],
+    [
+      "MONTE CARLO",
+      "Simulation method using repeated random sampling to estimate distributions."
+    ],
+    [
+      "4 Vs",
+      "Volume, Variety, Variation, Visibility. Slack et al. operations strategy."
+    ],
+    [
+      "TOC",
+      "Theory of Constraints (Goldratt). Five focusing steps: identify, exploit, subordinate, elevate, repeat."
+    ],
+    [
+      "TPS",
+      "Toyota Production System. Pull, jidoka, heijunka, kanban. The basis for Lean."
+    ],
+    [
+      "SCOPE 3",
+      "Indirect emissions across the value chain. Categories 1 and 4 dominate."
+    ],
+    [
+      "CIRCULAR",
+      "Supply chain that designs out waste — reduce, reuse, refurbish, remanufacture, recycle."
+    ],
+    [
+      "COGS",
+      "Cost of Goods Sold. Aggregate TCO at the product level. Drives gross margin."
+    ],
+    [
+      "OTD",
+      "On-Time Delivery. Standard supplier scorecard metric."
+    ],
+    [
+      "OEE",
+      "Overall Equipment Effectiveness = Availability × Performance × Quality."
+    ],
+    [
+      "MOQ",
+      "Minimum Order Quantity. Supplier-imposed lower bound; binding on EOQ."
+    ],
+    [
+      "NPV",
+      "Net Present Value. Time-discounted cash flows; canonical investment criterion."
+    ],
+    [
+      "CV",
+      "Coefficient of Variation = σ / µ. Demand variability normalized."
+    ]
+  ],
+  "new_glossary": [
+    [
+      "TRIPLE-A",
+      "Hau Lee's framework: Agility, Adaptability, Alignment. Best supply chains have all three; alignment gates the others."
+    ],
+    [
+      "VALUE CAPTURE",
+      "Brandenburger-Stuart: the share of created value a firm appropriates. Distinct from value creation."
+    ],
+    [
+      "CAPABILITY",
+      "Pisano: a firm-specific bundle of routines and assets that competitors cannot easily replicate."
+    ],
+    [
+      "p-MEDIAN",
+      "MILP formulation: choose p facilities from candidates to minimize weighted distance to demand."
+    ],
+    [
+      "p-CENTER",
+      "MILP variant: minimize the maximum distance any customer travels (vs p-median which minimizes weighted average)."
+    ],
+    [
+      "SET COVERING",
+      "Minimum number of facilities such that every demand point is within a radius (alternative to p-median)."
+    ],
+    [
+      "MILP",
+      "Mixed-Integer Linear Programming. Workhorse of network design — combinatorial choices + linear constraints."
+    ],
+    [
+      "DUAL VARIABLE",
+      "In LP, the shadow price of a constraint. Reveals which constraints are binding and what they cost."
+    ],
+    [
+      "NP-HARD",
+      "Computational class. VRP, p-median, scheduling — all NP-hard. Practitioners use heuristics, not exact solvers."
+    ],
+    [
+      "SAVINGS ALGO",
+      "Clarke-Wright heuristic for VRP. Combines routes by selecting pairs that maximize distance saved."
+    ],
+    [
+      "LITTLE'S LAW",
+      "L = λ × W. Average inventory = throughput × time-in-system. Holds for any stable queueing system."
+    ],
+    [
+      "M/M/1",
+      "Single-server queue with Poisson arrivals and exponential service. Foundational queueing model."
+    ],
+    [
+      "ERLANG C",
+      "Multi-server queueing formula for call center / dock staffing. Predicts wait time given arrivals and service rate."
+    ],
+    [
+      "SCOPE 1/2/3",
+      "GHG emissions accounting: 1=direct (boilers), 2=purchased energy, 3=value chain (the 70–95% upstream)."
+    ],
+    [
+      "CBAM",
+      "EU Carbon Border Adjustment Mechanism (2023). Prices imported carbon. Real cost on EU-bound supply chains."
+    ],
+    [
+      "EU ETS",
+      "EU Emissions Trading System. ~€80–100/tonne CO as of 2026. Foundational carbon market."
+    ],
+    [
+      "SBTi",
+      "Science Based Targets initiative. Validates corporate emissions targets against 1.5°C/2°C pathways."
+    ],
+    [
+      "CIRCULARITY",
+      "Designing supply chains for reuse, repair, remanufacturing. Ellen MacArthur Foundation taxonomy."
+    ],
+    [
+      "FRIEND-SHORING",
+      "Yellen 2022. Relocating production to politically aligned countries. Trades cost for geopolitical stability."
+    ],
+    [
+      "DECOUPLING",
+      "Reducing supply chain interdependence with geopolitical rival. US-China decoupling is the salient case."
+    ],
+    [
+      "CHIPS ACT",
+      "$200B+ US semiconductor industrial policy (2022). Largest peacetime industrial subsidy in US history."
+    ],
+    [
+      "IRA",
+      "Inflation Reduction Act (2022). $370B for clean energy + EV batteries with domestic content requirements."
+    ],
+    [
+      "SECTION 301",
+      "US trade law authorizing tariffs on China. ~25% on most categories since 2018; politically irreversible."
+    ],
+    [
+      "DSCSA",
+      "Drug Supply Chain Security Act. Mandates unit-level serialization + electronic chain-of-custody for US pharma."
+    ],
+    [
+      "EPCIS",
+      "Electronic Product Code Information Services. The data exchange standard underlying DSCSA."
+    ],
+    [
+      "COLD CHAIN",
+      "Temperature-controlled supply chain (typically 2–8°C for vaccines, ≤−15°C for some biologics)."
+    ],
+    [
+      "FDA 483",
+      "FDA notice of objectionable conditions during inspection. Operations-stopping event for regulated facilities."
+    ],
+    [
+      "EUV",
+      "Extreme Ultraviolet Lithography. ASML monopoly. Gates ≤7nm semiconductor production."
+    ],
+    [
+      "FOUNDRY",
+      "Pure-play semiconductor manufacturer (TSMC, Samsung Foundry). Distinct from IDMs (Intel) and fabless (Nvidia)."
+    ],
+    [
+      "ALLOCATION",
+      "When fab capacity is constrained, the share each customer receives. A queueing problem with priority rules."
+    ],
+    [
+      "BEER GAME",
+      "Sterman 1989 simulation showing bullwhip emerges even with rational players due to feedback misperception."
+    ],
+    [
+      "ANCHORING",
+      "Tversky-Kahneman 1974. First number framing dominates subsequent estimates. First-offer effect in negotiation."
+    ]
+  ],
+  "base_reading": [
+    [
+      "CANON",
+      "Simchi-Levi, Kaminsky & Simchi-Levi.",
+      "Designing and Managing the Supply Chain",
+      "4th ed., McGraw-Hill, 2021.",
+      "integrated framework",
+      1
+    ],
+    [
+      "CORE",
+      "Ellram, L. M.",
+      "\"Total cost of ownership.\"",
+      "IJPDLM, 1995.",
+      "TCO",
+      1
+    ],
+    [
+      "CORE",
+      "Choi, T. Y. & Linton, T.",
+      "\"Don't Let Your Supply Chain Control Your Business.\"",
+      "HBR, Dec 2011.",
+      "tier-N visibility",
+      2
+    ],
+    [
+      "CORE",
+      "Fisher, M. L.",
+      "\"What Is the Right Supply Chain for Your Product?\"",
+      "HBR, 1997.",
+      "matching chain to product",
+      5
+    ],
+    [
+      "CANON",
+      "Lee, Padmanabhan & Whang.",
+      "\"Information Distortion in a Supply Chain: The Bullwhip Effect.\"",
+      "Mgmt Sci, 1997.",
+      "bullwhip",
+      7
+    ],
+    [
+      "CANON",
+      "Silver, Pyke & Peterson.",
+      "Inventory Management and Production Planning",
+      "Wiley, 1998.",
+      "inventory theory",
+      11
+    ],
+    [
+      "CORE",
+      "Petruzzi, N. C. & Dada, M.",
+      "\"Pricing and the Newsvendor Problem.\"",
+      "Op Res, 1999.",
+      "newsvendor extensions",
+      12
+    ],
+    [
+      "CANON",
+      "Kraljic, P.",
+      "\"Purchasing Must Become Supply Management.\"",
+      "HBR, Sept–Oct 1983.",
+      "spend segmentation",
+      16
+    ],
+    [
+      "CANON",
+      "Williamson, O. E.",
+      "The Economic Institutions of Capitalism",
+      "Free Press, 1985.",
+      "TCE / make-vs-buy",
+      17
+    ],
+    [
+      "CORE",
+      "Tang, C. S.",
+      "\"Perspectives in supply chain risk management.\"",
+      "IJPE, 2006.",
+      "risk-cost trade",
+      19
+    ],
+    [
+      "CANON",
+      "Fisher, R. & Ury, W.",
+      "Getting to Yes",
+      "Houghton Mifflin, 1981.",
+      "principled negotiation",
+      21
+    ],
+    [
+      "CORE",
+      "Cachon, G. P. & Lariviere, M. A.",
+      "\"Supply Chain Coordination with Revenue-Sharing Contracts.\"",
+      "Mgmt Sci, 2005.",
+      "contract coordination",
+      22
+    ],
+    [
+      "CANON",
+      "Sheffi, Y. & Rice, J. B.",
+      "\"A Supply Chain View of the Resilient Enterprise.\"",
+      "MIT Sloan Mgmt Rev, 2005.",
+      "resilience",
+      30
+    ],
+    [
+      "CORE",
+      "Daskin, M. S.",
+      "Network and Discrete Location",
+      "Wiley, 2013.",
+      "facility location",
+      32
+    ],
+    [
+      "CORE",
+      "Hull, J. C.",
+      "Options, Futures, and Other Derivatives",
+      "Pearson, 11th ed.",
+      "commodity finance",
+      36
+    ],
+    [
+      "CANON",
+      "Sheffi, Y.",
+      "The Power of Resilience",
+      "MIT Press, 2015.",
+      "flexibility vs redundancy",
+      41
+    ],
+    [
+      "CANON",
+      "Raiffa, H.",
+      "Decision Analysis",
+      "Addison-Wesley, 1968.",
+      "EVPI / decision trees",
+      47
+    ],
+    [
+      "CORE",
+      "Box, G. E. P.",
+      "\"Science and Statistics.\"",
+      "JASA, 1976.",
+      "model humility",
+      50
+    ],
+    [
+      "CANON",
+      "Goldratt, E. M. & Cox, J.",
+      "The Goal",
+      "North River Press, 1984.",
+      "theory of constraints",
+      53
+    ],
+    [
+      "CANON",
+      "Womack & Jones.",
+      "Lean Thinking",
+      "Simon & Schuster, 1996.",
+      "lean",
+      54
+    ],
+    [
+      "CORE",
+      "WRI / WBCSD.",
+      "GHG Protocol Corporate Value Chain (Scope 3) Standard",
+      "2011.",
+      "scope 3 carbon",
+      56
+    ],
+    [
+      "CORE",
+      "Simchi-Levi, D.",
+      "Operations Rules",
+      "MIT Press, 2014.",
+      "analytics applied",
+      58
+    ]
+  ],
+  "new_reading": [
+    [
+      "CANON",
+      "Lee, H. L.",
+      "\"The Triple-A Supply Chain.\"",
+      "HBR, October 2004.",
+      "agility/adaptability/alignment",
+      61
+    ],
+    [
+      "CORE",
+      "Lee, H. L. & Tang, C. S.",
+      "\"Socially and Environmentally Responsible Value Chain Innovations.\"",
+      "Mgmt Sci, March 2018.",
+      "value chain innovation",
+      61
+    ],
+    [
+      "CANON",
+      "Brandenburger, A. M. & Stuart, H. W.",
+      "\"Value-based Business Strategy.\"",
+      "J. Econ. & Mgmt. Strategy, 1996.",
+      "value capture / strategy",
+      51
+    ],
+    [
+      "CORE",
+      "Pisano, G. P.",
+      "\"Toward a Prescriptive Theory of Dynamic Capabilities.\"",
+      "Industrial & Corp. Change, 2015.",
+      "capabilities",
+      51
+    ],
+    [
+      "CANON",
+      "Daskin, M. S.",
+      "Network and Discrete Location: Models, Algorithms, and Applications",
+      "2nd ed., Wiley, 2013.",
+      "facility location",
+      63
+    ],
+    [
+      "CORE",
+      "Toth, P. & Vigo, D.",
+      "Vehicle Routing: Problems, Methods, and Applications",
+      "SIAM, 2014.",
+      "vehicle routing",
+      64
+    ],
+    [
+      "CANON",
+      "Little, J. D. C.",
+      "\"A Proof for the Queuing Formula: L = λW.\"",
+      "Op. Res. 9(3), 1961.",
+      "Little's Law",
+      65
+    ],
+    [
+      "CORE",
+      "Hopp, W. J. & Spearman, M. L.",
+      "Factory Physics",
+      "3rd ed., 2008.",
+      "queueing / variability",
+      66
+    ],
+    [
+      "CANON",
+      "Plambeck, E. L.",
+      "\"Reducing greenhouse gas emissions through operations and supply chain management.\"",
+      "Energy Economics 34, 2012.",
+      "operational sustainability",
+      67
+    ],
+    [
+      "CORE",
+      "Lee, H. L., Plambeck, E. L. & Yatsko, P.",
+      "\"Embracing Green in China... with an NGO Nudge.\"",
+      "SCMR, March 2012.",
+      "Walmart sustainability case",
+      67
+    ],
+    [
+      "CORE",
+      "WRI / WBCSD",
+      "Corporate Value Chain (Scope 3) Accounting and Reporting Standard",
+      "2011.",
+      "Scope 3 calculation",
+      69
+    ],
+    [
+      "EMERGING",
+      "European Commission",
+      "Carbon Border Adjustment Mechanism, Reg. (EU) 2023/956",
+      "2023.",
+      "CBAM",
+      68
+    ],
+    [
+      "EMERGING",
+      "Witt, M. A. et al.",
+      "\"Decoupling in international business.\"",
+      "J. World Business 58(2), 2023.",
+      "decoupling research",
+      70
+    ],
+    [
+      "EMERGING",
+      "Allen, G. C. (CSIS)",
+      "Sourcing Requirements and U.S. Technological Competitiveness",
+      "CSIS Brief, 2024.",
+      "CHIPS Act analysis",
+      71
+    ],
+    [
+      "CORE",
+      "Mazzucato, M.",
+      "The Entrepreneurial State",
+      "Anthem Press, 2013.",
+      "industrial policy",
+      75
+    ],
+    [
+      "CORE",
+      "Scheinker, D. & Brandeau, M. L.",
+      "\"Healthcare operations management: A bridge to the future.\"",
+      "Annals of OR, var.",
+      "healthcare ops",
+      72
+    ],
+    [
+      "EMERGING",
+      "FDA",
+      "Drug Supply Chain Security Act: Implementation Guide",
+      "2024.",
+      "DSCSA serialization",
+      73
+    ],
+    [
+      "CANON",
+      "Sterman, J. D.",
+      "\"Modeling Managerial Behavior: Misperceptions of Feedback in a Dynamic Decision Making Experiment.\"",
+      "Mgmt Sci 35(3), 1989.",
+      "behavioral ops / beer game",
+      76
+    ],
+    [
+      "CANON",
+      "Croson, R. & Donohue, K.",
+      "\"Behavioral Causes of the Bullwhip Effect.\"",
+      "Mgmt Sci 52(3), 2006.",
+      "behavioral bullwhip",
+      76
+    ],
+    [
+      "CORE",
+      "Gino, F. & Pisano, G.",
+      "\"Toward a Theory of Behavioral Operations.\"",
+      "M&SOM 10(4), 2008.",
+      "behavioral ops theory",
+      76
+    ],
+    [
+      "CORE",
+      "Galinsky, A. D. & Mussweiler, T.",
+      "\"First Offers as Anchors.\"",
+      "J. Pers. & Soc. Psych. 81(4), 2001.",
+      "anchoring in negotiation",
+      77
+    ]
+  ]
+}
