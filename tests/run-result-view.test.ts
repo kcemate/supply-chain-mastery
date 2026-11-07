@@ -1,0 +1,38 @@
+import assert from 'node:assert/strict';
+import { initialLanes, initialLocations } from '../src/flywayData';
+import { createRunInput, runInput } from '../src/flywayEngine';
+import { createMemoryRunReader } from '../src/localRunRepository';
+import { openRunView } from '../src/runResultView';
+import { answerSavedModelQuestion } from '../src/modelAssistant';
+import type { RunMetricQuery } from '../src/runArtifacts';
+
+const input=createRunInput(initialLocations,initialLanes,{id:'bounded-view',name:'Bounded result view',description:'Result view regression',type:'dc-outage',targetId:'dc-cartersville',magnitude:100,grain:'weekly',horizon:2,startDate:'2026-09-07',createdAt:'2026-09-04T00:00:00Z',baselineRevision:'view-test'});
+const output=runInput(input);
+const repository=await createMemoryRunReader(output);
+let metricQuery:RunMetricQuery|undefined;
+const reader={...repository,metrics:async(query:RunMetricQuery,signal?:AbortSignal)=>{metricQuery=query;return repository.metrics(query,signal);}};
+const view=await openRunView(reader);
+assert.equal('periodMetrics' in view,false,'The routine result view must not own a full trace.');
+assert.equal('baselinePeriodMetrics' in view,false);
+assert.equal(view.outputChecksum,output.outputChecksum);
+assert.deepEqual(view.input,input);
+assert.equal(view.reader,reader);
+
+const shortage=await answerSavedModelQuestion('Which products run out first and on which dates?',{result:view,locations:[]});
+assert.equal(shortage.tool,'restaurant_product_period_stockouts');
+assert.deepEqual(metricQuery,{kind:'scenario',locationType:'restaurant',locationId:undefined,stockoutsOnly:true,limit:8});
+assert.match(shortage.text,/Earliest saved records/);
+assert.ok(shortage.citations.length<=4);
+assert.ok(shortage.citations.every(citation=>!citation.detail.includes('undefined')));
+const costs=await answerSavedModelQuestion('Explain the cost components',{result:view,locations:[]});
+assert.equal(costs.tool,'run_cost_components');
+assert.match(costs.text,/vehicle dispatch/);assert.match(costs.text,/entire frozen horizon/);
+const assumptions=await answerSavedModelQuestion('Which inputs are synthetic?',{result:view,locations:[]});
+assert.match(assumptions.text,new RegExp(`${input.locations.length} locations`));
+assert.equal(assumptions.tool,'run_assumptions');
+const failedReader={...reader,metrics:async()=>{throw new Error('Stored chunk unavailable');}};
+await assert.rejects(()=>answerSavedModelQuestion('Which products run out first?',{result:{...view,reader:failedReader},locations:[]}),/Stored chunk unavailable/,'A failed page must not become a plausible no-shortage answer.');
+await assert.rejects(()=>openRunView({...reader,input:async()=>({...input,locations:input.locations.slice(1)})}),/frozen identity check/);
+await assert.rejects(()=>openRunView({...reader,summary:{...reader.summary,outputChecksum:'invalid'}}),/summary is invalid/);
+const aborted=new AbortController();aborted.abort();await assert.rejects(()=>openRunView(reader,aborted.signal),/abort/i);
+console.log('Bounded result-view tests passed: no full traces, exact frozen identity, actual page queries, complete cost labels, failed-page propagation, and cancellation.');

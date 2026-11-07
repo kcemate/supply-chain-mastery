@@ -1,10 +1,10 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { OntologyApp } from './OntologyApp';
-import './styles.css';
+import { FlywayApp } from './FlywayApp';
+import { FlywayErrorBoundary } from './FlywayErrorBoundary';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <OntologyApp />
+    <FlywayErrorBoundary><FlywayApp /></FlywayErrorBoundary>
   </React.StrictMode>,
 );

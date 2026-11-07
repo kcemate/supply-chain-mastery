@@ -1,4 +1,15 @@
-# Structured Ontology Scene Plan
+# Flyway — current publication checkpoint
+
+The active app is now Flyway. The legacy ontology/learning work below is retained as project history, not a statement of current Flyway behavior.
+
+- [x] Curate current Flyway source, deterministic engine, public evidence, service, tests and documentation without local/private state.
+- [x] Preserve the existing GitHub history on a separate `flyway/decision-intelligence` branch.
+- [x] Verify the publication build and tests; document known browser-health failure without weakening the gate.
+- [ ] Push and read back the exact GitHub branch commit.
+
+The current product contract is `docs/chick-fil-a-digital-twin-build-spec.md`. Prototype status is `docs/audits/decision-intelligence-prototype-2026-11-06.md`; hosted-build evidence is `docs/audits/decision-intelligence-here-now-2026-11-07.md`. GitHub publication scope and verification are in `docs/audits/github-publication-2026-11-07.md`. A static publication does not configure a live AI provider or execute operating changes.
+
+# Structured Ontology Scene Plan — retained history
 
 ## GitHub Publish Plan - 2026-06-19
 
