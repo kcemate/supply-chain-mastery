@@ -9,6 +9,7 @@ Flyway is not affiliated with, endorsed by, or sponsored by Chick-fil-A, Inc. It
 - Separate Public network, Planning model, and frozen Compare workspaces. The bundled August 2026 evidence snapshot contains 3,458 official location-page records, 3,424 official-page-validated restaurant points, and 16 directly named U.S. distribution facilities. It is not a complete current operating registry.
 - Distribution-facility markers preserve evidence precision: 13 exact official addresses, three city-level records with visible source conflicts, and one launch/stand-up record. They never imply capacity, routes, inventory, territories, restaurant assignments, or current operating status.
 - A visibly separate 12-node operating model drives routes, inventory, capacity, costs, and scenarios; the national public footprint is never presented as modeled operational truth.
+- Optional fictional expansion: choose **Control Tower → Planning model → Add synthetic network**, or use the same action in **Locations**. It adds a deterministic eight-region sample with 88 restaurants, eight distribution centers, 24 suppliers, and 112 lanes. All seven products have modeled flows. Demand, inventory, capacity, freight, and assignments are editable assumptions, never public records. The addition preserves existing data and saved runs. Choose **Inspect sample hub** to review the inputs or create an outage scenario.
 - Restaurant, distribution-center, and supplier records with public, corroborated, sample-estimate, and user-input provenance.
 - Address matching against accepted bundled records, optional service-backed Census geocoding, or explicit manual placement with coordinate confirmation. The UI does not invent successful geocoding.
 - MapLibre pan/zoom, USA/Hawaii/Alaska framing, selected modeled lanes, keyboard-operable facilities, and a bundled state atlas without raster-tile dependencies.
@@ -47,6 +48,8 @@ npm run design:lint
 ```
 
 Focused decision checks: `npm run test:decisions`, `npm run test:decision-backend`, `npm run test:intelligence-prototype`, and `npm run test:intelligence-connected`. Provider tests use fake HTTP responses through the real tool gateway; they do not validate a paid live provider connection. Engine 2.0.1 corrects DC capacity-change ceilings and utilization denominators so applied capacity matches its measured candidate; decisions from older engine versions cannot be approved under the new engine.
+
+Synthetic expansion checks: `npm run test:synthetic-network` verifies the versioned graph, evidence, merge semantics, and calculated baseline/disruption behavior; `npm run test:synthetic-browser` exercises actual install, scenario, reload, and public-layer separation with strict browser health checks.
 
 Current full-application browser artifacts are saved in `tasks/browser-evidence/`. Historical `tasks/flyway-*-smoke.png` files are dated evidence, not proof of the current build. The worker-isolation gate also executes a real national-size model while checking health, cancellation, and graceful restart recovery.
 

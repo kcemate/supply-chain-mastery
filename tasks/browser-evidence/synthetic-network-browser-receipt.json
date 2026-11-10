@@ -1,0 +1,40 @@
+{
+  "workflowPassed": true,
+  "totalLocations": 132,
+  "totalLanes": 124,
+  "interactions": [
+    "Opened the public atlas and switched to the separate Planning model.",
+    "Added the expansion by keyboard, verified exact map counts, and waited for a calculated baseline.",
+    "Used a compact overview marker with its full keyboard target to select an overlapping sample restaurant.",
+    "Opened the sample hub, ran a real outage with higher shortages, and saved the frozen result.",
+    "Reloaded and proved synthetic sites do not enter the public atlas.",
+    "Verified the saved scenario and expansion persisted, duplicate add is unavailable, and the registry identifies sample evidence."
+  ],
+  "screenshots": [
+    "tasks/browser-evidence/synthetic-network-before-desktop.png",
+    "tasks/browser-evidence/synthetic-network-planning-desktop.png",
+    "tasks/browser-evidence/synthetic-network-locations-tablet-dark.png"
+  ],
+  "scans": [
+    {
+      "label": "expanded desktop planning",
+      "violations": 0,
+      "blocking": 0
+    },
+    {
+      "label": "filtered tablet dark registry",
+      "violations": 0,
+      "blocking": 0
+    }
+  ],
+  "health": {
+    "errors": [],
+    "warnings": [
+      "[.WebGL-0x10c004e3c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+      "[.WebGL-0x10c004e3c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+    ],
+    "pageErrors": [],
+    "failedRequests": [],
+    "failedResponses": []
+  }
+}

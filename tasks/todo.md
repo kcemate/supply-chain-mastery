@@ -1,5 +1,16 @@
 # Flyway — current publication checkpoint
 
+## Synthetic planning expansion — November 10, 2026
+
+- [x] Add a deterministic, fictional network: 88 restaurants, 8 distribution centers, 24 suppliers, and 112 lanes across eight U.S. regions.
+- [x] Make the expansion available from **Planning model** and **Locations**, without overwriting existing data or changing the public atlas.
+- [x] Verify append/merge, editable evidence, disruption simulation, saved scenarios, reload, and desktop/tablet interaction. See [implementation verification](../docs/audits/synthetic-network-expansion-2026-11-09.md) and [hosted verification](../docs/audits/synthetic-network-here-now-2026-11-09.md).
+- [ ] Resolve the existing strict headless WebGL warning gate before treating the prototype as release-ready.
+
+The examples model fictional supply and demand. They do not establish company relationships, capacities, routes, or actual operating performance.
+
+## Earlier decision-intelligence publication
+
 The active app is now Flyway. The legacy ontology/learning work below is retained as project history, not a statement of current Flyway behavior.
 
 - [x] Curate current Flyway source, deterministic engine, public evidence, service, tests and documentation without local/private state.

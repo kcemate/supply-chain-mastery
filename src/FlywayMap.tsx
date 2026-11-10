@@ -7,6 +7,8 @@ const CONTIGUOUS_US_BOUNDS: [[number, number], [number, number]] = [[-125.2, 24.
 const HAWAII_BOUNDS: [[number, number], [number, number]] = [[-160.5, 18.7], [-154.5, 22.5]];
 const ALASKA_BOUNDS: [[number, number], [number, number]] = [[-169, 53], [-130, 71.5]];
 const OVERLAP_RADIUS_PX = 44;
+const COMPACT_MODEL_THRESHOLD = 48;
+const DETAIL_ZOOM = 5.5;
 
 type MapSelectionTarget = {
   key: string;
@@ -328,6 +330,9 @@ export function FlywayMap({
       setReady(true);
     });
     map.on('movestart', event => { if (event.originalEvent) userCameraRef.current = true; });
+    const syncZoom = () => map.getContainer().classList.toggle('is-overview-zoom', map.getZoom() < DETAIL_ZOOM);
+    syncZoom();
+    map.on('zoom', syncZoom);
     map.on('move', () => arrangeFacilityLabels(map, markersRef.current));
     map.on('error', (event) => {
       if (String(event.error?.message || '').toLowerCase().includes('source')) setTileWarning(true);
@@ -442,7 +447,7 @@ export function FlywayMap({
       const selected = selectedId === location.id;
       const showLabel = selectedId === location.id || (impacted && impactedIds.indexOf(location.id) === 0);
       const element = markerElement(location, selected, impacted, showLabel);
-      element.style.zIndex = selected ? '31' : impacted ? '21' : '11';
+      element.style.zIndex = selected ? '31' : impacted ? '21' : sampleLocations.length >= COMPACT_MODEL_THRESHOLD && location.type === 'dc' ? '14' : '11';
       const target: MapSelectionTarget = {
         key: `modeled:${location.id}`,
         id: location.id,
@@ -510,7 +515,7 @@ export function FlywayMap({
   }, [focusPoint?.id, ready]);
 
   return (
-    <div className={`network-map real-network-map${placementMode ? ' is-placement-mode' : ''}`} data-testid="network-map">
+    <div className={`network-map real-network-map${placementMode ? ' is-placement-mode' : ''}${layerState.sampleModel && locations.length >= COMPACT_MODEL_THRESHOLD ? ' is-dense-model' : ''}`} data-testid="network-map">
       <div ref={containerRef} className="maplibre-host" aria-label={layerState.sampleModel?`Interactive U.S. planning map with ${locations.length} modeled locations. Operating values and connections are assumptions.`:`Interactive U.S. evidence atlas with ${publicFootprint?.metadata.officialRecordCount || 0} official location pages, ${publicFacilities?.facilityCount || 0} publicly evidenced distribution facilities, and no verified service territories`} />
       {!ready && <div className="map-loading" role="status"><span />Loading bundled U.S. atlas…</div>}
       {tileWarning && <div className="map-tile-warning" role="status">Geography could not load. Records remain available in the network list. Reload to retry.</div>}

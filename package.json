@@ -13,6 +13,8 @@
     "data:build-state-atlas": "node scripts/build-state-atlas.mjs",
     "test:engine": "tsx tests/engine.test.ts",
     "test:data": "tsx tests/public-footprint.test.ts",
+    "test:synthetic-network": "tsx tests/synthetic-network.test.ts",
+    "test:synthetic-browser": "tsx tests/synthetic-network.browser.ts",
     "test:evidence": "tsx tests/evidence-domain.test.ts && tsx tests/evidence-refresh.test.ts && tsx tests/evidence-ingestion.test.ts && tsx tests/evidence-workbench.test.tsx && tsx tests/evidence-workbench.browser.ts",
     "test:storage": "tsx tests/workspace-storage.test.ts",
     "test:model-editor": "tsx tests/model-location-panel.test.tsx && tsx tests/model-location-panel.browser.ts",
@@ -34,7 +36,7 @@
     "platform:backup": "tsx server/cli.ts backup",
     "platform:restore": "tsx server/cli.ts restore",
     "design:lint": "designmd lint DESIGN.md",
-    "verify": "npm run build && npm run test:engine && npm run test:data && npm run test:evidence && npm run test:storage && npm run test:run-artifacts && npm run test:run-reader && npm run test:model-editor && npm run test:map-overlap && npm run test:workspace-context && npm run test:scenario-draft && npm run test:decisions && npm run test:decision-backend && npm run test:intelligence-prototype && npm run test:intelligence-connected && npm run test:platform && npm run test:platform-worker && npm run test:platform-national && npm run test:browser"
+    "verify": "npm run build && npm run test:engine && npm run test:data && npm run test:synthetic-network && npm run test:evidence && npm run test:storage && npm run test:run-artifacts && npm run test:run-reader && npm run test:model-editor && npm run test:map-overlap && npm run test:workspace-context && npm run test:scenario-draft && npm run test:decisions && npm run test:decision-backend && npm run test:intelligence-prototype && npm run test:intelligence-connected && npm run test:platform && npm run test:platform-worker && npm run test:platform-national && npm run test:browser && npm run test:synthetic-browser"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^6.1.1",

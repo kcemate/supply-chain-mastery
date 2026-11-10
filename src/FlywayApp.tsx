@@ -91,6 +91,8 @@ import { useRunPage } from './useRunPage';
 import { RunPageControls } from './RunPageControls';
 import { DecisionIntelligencePage } from './DecisionIntelligencePage';
 import { useDecisionIntelligence } from './useDecisionIntelligence';
+import { SyntheticNetworkPanel } from './SyntheticNetworkPanel';
+import { addSyntheticNetwork, syntheticNetwork } from './syntheticNetwork';
 import './enterprise-workspace.css';
 
 const FlywayMap = React.lazy(() => import('./FlywayMap').then((module) => ({ default: module.FlywayMap })));
@@ -590,13 +592,14 @@ function ResultsDrawer({ result, scenario, locations, onClose, onSave, onRerun, 
 
 
 
-function LocationsPage({ locations, onSelect, onAdd }: { locations: TwinLocation[]; onSelect: (id: string) => void; onAdd: () => void }) {
+function LocationsPage({ locations, onSelect, onAdd, syntheticNetworkPanel }: { locations: TwinLocation[]; onSelect: (id: string) => void; onAdd: () => void; syntheticNetworkPanel: React.ReactNode }) {
   const [query, setQuery] = useState('');
   const [type, setType] = useState<LocationType | 'all'>('all');
   const filtered = locations.filter((location) => (type === 'all' || location.type === type) && `${location.name} ${location.city} ${location.state}`.toLowerCase().includes(query.toLowerCase()));
   return (
     <main id="main-content" className="page-view" data-testid="locations-page">
       <div className="page-header"><div><span className="eyebrow">Operational model registry</span><h1>Modeled locations</h1><p>Manage the editable nodes used in scenarios. The national public restaurant footprint remains a separate map layer.</p></div><button type="button" className="button primary" onClick={onAdd}><Plus size={17} />New modeled location</button></div>
+      {syntheticNetworkPanel}
       <div className="registry-summary">{(['restaurant', 'dc', 'supplier'] as LocationType[]).map((item) => { const Icon = typeMeta[item].icon; const count = locations.filter((location) => location.type === item).length; return <button type="button" key={item} className={classNames(type === item && 'is-active')} onClick={() => setType(type === item ? 'all' : item)}><Icon size={19} /><span><strong>{count}</strong><small>{typeMeta[item].label}{count === 1 ? '' : 's'}</small></span></button>; })}</div>
       <div className="table-toolbar"><label><Search size={17} /><input aria-label="Search locations" placeholder="Search locations…" value={query} onChange={(event) => setQuery(event.target.value)} /></label><span className="table-result-count" aria-live="polite">{filtered.length} of {locations.length} modeled locations</span></div>
       <div className="registry-table-wrap"><table className="registry-table"><thead><tr><th>Location</th><th>Type</th><th>Status</th><th>Demand / capacity</th><th>Assignment</th><th>Evidence</th><th>Last verified</th></tr></thead><tbody>{filtered.map((location) => <tr key={location.id}><td><button type="button" className="location-name-button" onClick={() => onSelect(location.id)}><strong>{location.name}</strong><small>{location.city}, {location.state}</small></button></td><td><span className={classNames('table-type', `is-${location.type}`)}>{React.createElement(typeMeta[location.type].icon, { size: 15 })}{typeMeta[location.type].label}</span></td><td><span className={classNames('status-chip', `is-${location.status}`)}>{location.status}</span></td><td><strong>{(location.weeklyDemand || location.weeklyCapacity || 0).toLocaleString()}</strong><small>{location.weeklyDemand ? 'cases / week demand' : 'cases / week capacity'}</small></td><td>{location.assignedDcId ? locations.find((item) => item.id === location.assignedDcId)?.city : '—'}</td><td><EvidenceBadge classification={location.evidence.classification} /></td><td>{location.evidence.verifiedAt}</td></tr>)}</tbody></table>{!filtered.length && <div className="empty-state"><Search size={24} /><h3>No locations match</h3><p>Clear the search or type filter to see the full network.</p><button type="button" className="button secondary" onClick={() => { setQuery(''); setType('all'); }}>Clear filters</button></div>}</div>
@@ -724,6 +727,7 @@ export function FlywayApp() {
   const [decisionDraft,saveDecisionDraft,decisionDraftStorageRevision]=usePersistedState<DecisionDraft|null>(`flyway-decision-draft:${workspaceContext}`,null);
   const [sidebarCollapsed,setSidebarCollapsed]=useState(true),[mobileNav,setMobileNav]=useState(false);
   const [toast,setToast]=useState(''),[runError,setRunError]=useState(''),[running,setRunning]=useState(false);
+  const [addingSyntheticNetwork, setAddingSyntheticNetwork] = useState(false);
   const [baseline,setBaseline]=useState<SimulationPreview>(),[baselineError,setBaselineError]=useState('');
   const [drawerEntered,setDrawerEntered]=useState(false),[drawerClosing,setDrawerClosing]=useState(false);
   const runAbort=useRef<AbortController>(),drawerTriggerRef=useRef<HTMLElement|null>(null),toastTimer=useRef<number>();
@@ -884,6 +888,27 @@ export function FlywayApp() {
     setScenarioSource(input);setScenarioSourceHash(activeResult.inputHash);setScenarioDraft(scenario);setScenarioEditorId(crypto.randomUUID());setRunError('');setDrawer('scenario');
   };
   const shownOpen=drawerEntered&&!drawerClosing;
+  const syntheticNetworkPanel = <SyntheticNetworkPanel
+    locations={locations}
+    lanes={lanes}
+    adding={addingSyntheticNetwork}
+    blocked={workspace.pending > 0 || !!workspace.connectionActivity || running || savingResult || !!intelligence.busy}
+    onAdd={() => {
+      if (protectResult()) return;
+      const revision = workspace.document.revision;
+      setAddingSyntheticNetwork(true);
+      void workspace.mutate(current => {
+        if (current.revision !== revision) throw new Error('The workspace changed before the synthetic data could be added. Review the latest revision and retry.');
+        return addSyntheticNetwork(current);
+      }).then(saved => {
+        if (saved) notify('Synthetic data added to the planning model');
+      }).finally(() => setAddingSyntheticNetwork(false));
+    }}
+    onExplore={() => {
+      setMode('planning');
+      openLocation(syntheticNetwork.scenarioHubId);
+    }}
+  />;
   return <div className={classNames('flyway-app',sidebarCollapsed&&'sidebar-collapsed',drawerClosing&&'drawer-closing')} data-testid="app-shell">
     <a className="skip-link" href="#main-content">Skip to main content</a>
     <button type="button" className={classNames('mobile-nav-scrim',mobileNav&&'is-open')} onClick={()=>setMobileNav(false)} aria-label="Close navigation" tabIndex={mobileNav?0:-1}/>
@@ -895,8 +920,8 @@ export function FlywayApp() {
       {resultStorageError&&<div className="workspace-error" role="alert"><AlertTriangle size={18}/><span>{resultStorageError}</span><button type="button" disabled={savingResult} onClick={()=>void saveScenario()}>Retry saving result</button></div>}
       {notices.map(n=><div className="workspace-error" role="alert" key={n.id}><AlertTriangle size={18}/><span>{n.message}</span><button type="button" aria-label="Dismiss storage notice" onClick={()=>dismissStorageNotice(n.id)}><X size={16}/></button></div>)}
       {running&&<div className="run-progress" role="status"><Activity size={18}/><span>{workspace.connected?`Service job ${serviceJobs.active?.status||'submitting'} · ${serviceJobs.active?.id||'awaiting confirmation'}. Closing the browser does not lose this job.`:'Evaluating frozen inputs in a background worker. The model is unchanged.'}</span><button type="button" disabled={workspace.connected&&!serviceJobs.active} onClick={()=>workspace.connected?void serviceJobs.cancel():runAbort.current?.abort()}>Cancel run</button></div>}
-      {view==='control-tower'&&<DecisionWorkspace locations={locations} lanes={lanes} defaults={defaults} baselineMetrics={baseline} baselineError={baselineError} mode={mode} onMode={setMode} selectedId={selectedId} onSelect={openLocation} selectedPublicFacilityId={selectedPublicFacilityId} onPublicFacilitySelect={openPublicFacility} onAdd={openAdd} onScenario={()=>openScenario()} onSources={()=>handleNavigate('sources')} onResults={()=>transitionFromScenario(()=>setDrawer('results'))} activeResult={activeResult} addMode={drawer==='add'} draftPoint={draftPoint} onAddPoint={setDraftPoint} onDraftMove={setDraftPoint} publicFootprint={publicFootprint} publicFootprintError={publicFootprintError} publicFacilities={publicFacilities} publicFacilitiesError={publicFacilitiesError}/>}
-      {view==='locations'&&<LocationsPage locations={locations} onSelect={openLocation} onAdd={openAdd}/>}
+      {view==='control-tower'&&<DecisionWorkspace locations={locations} lanes={lanes} defaults={defaults} baselineMetrics={baseline} baselineError={baselineError} mode={mode} onMode={setMode} selectedId={selectedId} onSelect={openLocation} selectedPublicFacilityId={selectedPublicFacilityId} onPublicFacilitySelect={openPublicFacility} onAdd={openAdd} onScenario={()=>openScenario()} onSources={()=>handleNavigate('sources')} onResults={()=>transitionFromScenario(()=>setDrawer('results'))} activeResult={activeResult} addMode={drawer==='add'} draftPoint={draftPoint} onAddPoint={setDraftPoint} onDraftMove={setDraftPoint} publicFootprint={publicFootprint} publicFootprintError={publicFootprintError} publicFacilities={publicFacilities} publicFacilitiesError={publicFacilitiesError} syntheticNetworkPanel={syntheticNetworkPanel}/>}
+      {view==='locations'&&<LocationsPage locations={locations} onSelect={openLocation} onAdd={openAdd} syntheticNetworkPanel={syntheticNetworkPanel}/>}
       {view==='decisions'&&<><DecisionIntelligencePage state={intelligence.state} busy={!!intelligence.busy||running||workspace.pending>0} error={intelligence.error||runError||workspace.error} onAnalyze={async()=>{if(protectResult())throw new Error('Save the current result or wait for its operation to finish before analyzing.');await intelligence.analyze();}} onResolve={async(id,action,reason)=>{if(protectResult())throw new Error('Save the current result or wait for its operation to finish. Your decision reason is retained.');await intelligence.resolve(id,action,reason);}} onPolicyChange={async policy=>{if(protectResult())throw new Error('Save the current result or wait for its operation to finish before changing policy.');await intelligence.updatePolicy(policy);}} onOpenRun={id=>void openIntelligenceRun(id)} onAsk={askDecision} providerStatus={intelligence.providerStatus} onConfigureAI={configureAI}/>{intelligence.busy&&<p className="decision-operation-message" role="status">{intelligence.busy}</p>}</>}
       {view==='scenarios'&&<><ScenariosPage scenarios={scenarios} onCreate={()=>openScenario()} onOpen={scenario=>void openSavedScenario(scenario)}/>{workspace.connected&&<div className="page-view"><ServiceRunHistory jobs={serviceJobs} busy={running||savingResult} onOpen={async(run,retry)=>{if(protectResult())return;const context=workspaceContext;setRunning(true);setRunError('');runAbort.current=new AbortController();try{const reader=await(retry?serviceJobs.retry(run):serviceJobs.resume(run));const result=await openRunView(reader,runAbort.current.signal);if(context!==workspaceContextRef.current)return;setPendingScenario(result.input.scenario);setPendingResult(result);setRetainedOutput(undefined);setResultStorageError('');setActiveScenario(undefined);setMode('compare');setView('control-tower');setDrawer('results');}catch(reason){if(context===workspaceContextRef.current)setRunError(reason instanceof Error?reason.message:'Could not retrieve this run.');}finally{setRunning(false);}}}/></div>}{runError&&<p role="alert" className="form-error">{runError}</p>}</>}
       {view==='sources'&&<main id="main-content" className="page-view" data-testid="sources-page"><EvidenceWorkbench footprint={publicFootprint} facilities={publicFacilities} ledger={ledger||{schemaVersion:1,sources:[],artifacts:[],snapshots:[],values:[],conflicts:[]}} loading={!publicFootprint&&!publicFootprintError||!publicFacilities&&!publicFacilitiesError} error={publicFootprintError||publicFacilitiesError} onLedger={next=>workspace.mutate(current=>{if(current.revision!==workspace.document.revision)throw new Error('Evidence changed before this decision could be saved. Your review reason is retained; reload and review the latest record.');return {...current,evidenceLedger:next};})}/></main>}

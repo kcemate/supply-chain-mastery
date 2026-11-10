@@ -65,6 +65,18 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .evidence-inspector .evidence-boundary { font-size:13px; margin:24px 0 0; }
 .model-label { display:flex; align-items:center; gap:6px; font-size:13px; color:var(--fw-synthetic); margin-bottom:16px; }
 .model-label>span { width:7px; height:7px; border:1px dashed currentColor; }
+.synthetic-network-panel { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px 24px; padding:14px 16px; background:var(--fw-surface); border:1px solid var(--fw-border); border-radius:10px; margin-bottom:16px; }
+.decision-workspace>.synthetic-network-panel { margin:16px 24px 0; }
+.synthetic-network-copy { flex:1 1 400px; min-width:0; }
+.synthetic-network-heading { display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px; }
+.synthetic-network-heading h2 { font-size:14px; font-weight:800; margin:0; }
+.synthetic-network-copy p { color:var(--fw-text-2); font-size:13px; margin:4px 0 0; }
+.synthetic-network-copy .synthetic-network-counts { color:var(--fw-text); font-weight:700; font-variant-numeric:tabular-nums; }
+.synthetic-network-action { min-height:44px; max-width:100%; white-space:normal; }
+@media(max-width:768px) { .decision-workspace>.synthetic-network-panel { margin-inline:16px; } }
+.is-dense-model .is-overview-zoom .real-map-node:not(.is-dc,.is-selected,.is-impacted,:focus-visible)::before { width:8px; height:8px; border-width:1px; border-style:solid; box-shadow:none; }
+.is-dense-model .is-overview-zoom .real-map-node.is-supplier:not(.is-selected,.is-impacted,:focus-visible)::before { border-radius:0; background:var(--fw-synthetic); }
+.is-dense-model .is-overview-zoom .real-map-node:not(.is-dc,.is-selected,.is-impacted,:focus-visible) .real-map-node-glyph { visibility:hidden; }
 .planning-metrics { margin:24px 0; }
 .planning-metrics>div { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 12px; border-bottom:1px solid var(--fw-border); padding:12px 0; }
 .planning-metrics dt { align-self:center; color:var(--fw-text-2); font-size:14px; }
