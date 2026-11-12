@@ -8,16 +8,29 @@
     "Used a compact overview marker with its full keyboard target to select an overlapping sample restaurant.",
     "Opened the sample hub, ran a real outage with higher shortages, and saved the frozen result.",
     "Reloaded and proved synthetic sites do not enter the public atlas.",
+    "Reopened the saved approval-gated contingency and modeled it without changing the workspace (98651 → 80046 shortage units).",
     "Verified the saved scenario and expansion persisted, duplicate add is unavailable, and the registry identifies sample evidence."
   ],
   "screenshots": [
     "tasks/browser-evidence/synthetic-network-before-desktop.png",
     "tasks/browser-evidence/synthetic-network-planning-desktop.png",
+    "tasks/browser-evidence/synthetic-network-decision-loop-desktop.png",
+    "tasks/browser-evidence/synthetic-network-decision-loop-tablet.png",
     "tasks/browser-evidence/synthetic-network-locations-tablet-dark.png"
   ],
   "scans": [
     {
       "label": "expanded desktop planning",
+      "violations": 0,
+      "blocking": 0
+    },
+    {
+      "label": "desktop contingency and impact labels",
+      "violations": 0,
+      "blocking": 0
+    },
+    {
+      "label": "tablet contingency and impact labels",
       "violations": 0,
       "blocking": 0
     },
@@ -30,8 +43,8 @@
   "health": {
     "errors": [],
     "warnings": [
-      "[.WebGL-0x10c004e3c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
-      "[.WebGL-0x10c004e3c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+      "[.WebGL-0x11c00567800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+      "[.WebGL-0x11c00567800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
     ],
     "pageErrors": [],
     "failedRequests": [],

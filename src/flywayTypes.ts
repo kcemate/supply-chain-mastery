@@ -390,6 +390,9 @@ export interface LocationImpact {
   locationId: string;
   serviceDelta: number;
   stockoutUnits: number;
+  /** Change in unmet restaurant demand versus baseline, in the location's quantity unit. Absent on artifacts produced before engine 2.0.2. */
+  stockoutUnitsDelta?: number;
+  /** Change in modeled shortage-penalty cost at this restaurant versus baseline, in whole dollars (0 when the shortage penalty is excluded). Shared lane and DC costs are not attributed to a single restaurant. */
   costDelta: number;
   cause: string;
 }
@@ -408,6 +411,10 @@ export interface Recommendation {
   candidateOutputChecksum?: string;
   constraintsConsidered?: string[];
   rejectedAlternatives?: string[];
+  /** True when the proposal assigns restaurants to a DC beyond that DC's modeled service radius. */
+  exceedsServiceRadius?: boolean;
+  /** True when the response must never be applied without explicit human approval. */
+  requiresHumanApproval?: boolean;
 }
 
 export interface ScenarioResult {

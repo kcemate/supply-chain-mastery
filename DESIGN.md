@@ -96,6 +96,8 @@ Decision Intelligence is an operating workspace within the existing visual syste
 
 The policy editor can tighten, not exceed, hard prototype ceilings. Loading locks prevent duplicate action submissions; failures preserve the reason or draft. No sample decision history is invented. Empty queues explain how to run analysis. Tablet layouts stack the detail below the list without hiding approval controls. Long identifiers wrap; metrics use tabular figures. Copilot remains a focused drawer with a fixed composer and scrolling, persisted history.
 
+The policy editor explains the mandatory measured benefit over doing nothing. Scenario results show shortage-unit and shortage-cost changes separately; the cost is the modeled shortage penalty, not an allocation of shared freight or facility costs. Out-of-radius contingency cards label the exception and human approval requirement. Opening a response draft is explicitly a what-if calculation, not an approval or baseline update.
+
 Saved-result pages show explicit loading, failure, retry, and pagination states. Product/period totals cover the complete selected scope, not only the visible table page; cost remains clearly labeled as the full frozen horizon. Failed reads never substitute live-model values. A completed result that cannot be persisted remains visibly unsaved in memory, protects tab closure, and blocks workspace replacement until a successful save. Exact frozen-input JSON and detailed diagnostics are progressively disclosed.
 
 ## Responsive behavior

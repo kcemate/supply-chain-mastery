@@ -947,6 +947,7 @@ export function decodeScenarioResult(
           nonempty(item.locationId) &&
           finite(item.serviceDelta) &&
           nonnegative(item.stockoutUnits) &&
+          optional(item.stockoutUnitsDelta, finite) &&
           finite(item.costDelta) &&
           text(item.cause),
       ),
@@ -967,7 +968,9 @@ export function decodeScenarioResult(
           oneOf(item.confidence, ["High", "Medium", "Low"]) &&
           strings(item.affectedLocationIds) &&
           optional(item.constraintsConsidered, strings) &&
-          optional(item.rejectedAlternatives, strings),
+          optional(item.rejectedAlternatives, strings) &&
+          optional(item.exceedsServiceRadius, (flag) => typeof flag === "boolean") &&
+          optional(item.requiresHumanApproval, (flag) => typeof flag === "boolean"),
       ),
     "Recommendations are invalid.",
   );

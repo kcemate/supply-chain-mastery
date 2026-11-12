@@ -41,6 +41,35 @@ assert.equal(outage.scenario.serviceLevel, 0);
 assert.equal(outage.scenario.stockoutUnits, 70);
 assert.ok(outage.recommendations.some((item) => item.proposal?.some((change) => change.kind === 'reassign-restaurant')));
 
+// Location impacts report shortage units and dollars under truthful names: costDelta is the change in modeled
+// shortage-penalty dollars at the restaurant, not a unit count.
+const penaltyDollars = (rows: PeriodProductMetric[], locationId: string) => rows.filter((row) => row.locationId === locationId).reduce((sum, row) => sum + row.stockoutQuantity * outage.input!.defaults.shortagePenaltyMicrosByProduct[row.product], 0) / 1_000_000;
+const outageImpact = outage.impacts.find((impact) => impact.locationId === 'restaurant')!;
+assert.ok(outageImpact, 'The outage reports an impact at the stocked-out restaurant.');
+assert.equal(outageImpact.stockoutUnits, 70);
+assert.equal(outageImpact.stockoutUnitsDelta, 70);
+assert.equal(outageImpact.costDelta, Math.round(penaltyDollars(outage.periodMetrics!, 'restaurant') - penaltyDollars(outage.baselinePeriodMetrics!, 'restaurant')));
+assert.ok(outageImpact.costDelta > outageImpact.stockoutUnits, 'Impact cost is priced in dollars by product shortage penalty, not copied from shortage units.');
+const unpenalizedOutage = runScenario(base.locations, base.lanes, scenario('dc-outage', 'dc-1', { magnitude: 100 }), { includeShortagePenalty: false });
+const unpenalizedImpact = unpenalizedOutage.impacts.find((impact) => impact.locationId === 'restaurant')!;
+assert.equal(unpenalizedImpact.stockoutUnitsDelta, 70);
+assert.equal(unpenalizedImpact.costDelta, 0, 'Without a shortage penalty, unmet demand adds no landed-cost dollars at the restaurant.');
+
+// Full recovery remains visible even when the scenario has zero remaining stockout, while unchanged rows are omitted.
+const laneConstrained = fixture();
+laneConstrained.lanes.find((lane) => lane.id === 'dc-1-restaurant')!.weeklyCapacity = 35;
+const fullRecovery = runScenario(laneConstrained.locations, laneConstrained.lanes, scenario('price-change', 'network', {
+  magnitude: 0,
+  changes: [{ id: 'restore-lane-capacity', kind: 'adjust-lane', laneId: 'dc-1-restaurant', capacityMultiplier: 2, effectiveDay: 0 }],
+}));
+const recoveryImpact = fullRecovery.impacts.find((impact) => impact.locationId === 'restaurant')!;
+assert.ok(recoveryImpact, 'A restaurant with fully recovered service remains in the impact list.');
+assert.equal(recoveryImpact.stockoutUnits, 0);
+assert.equal(recoveryImpact.stockoutUnitsDelta, -35);
+assert.ok(recoveryImpact.costDelta < 0, 'Recovered shortage penalty is reported as a negative dollar delta.');
+const unchangedShortage = runScenario(laneConstrained.locations, laneConstrained.lanes, scenario('price-change', 'network', { magnitude: 25 }));
+assert.deepEqual(unchangedShortage.impacts, [], 'An unchanged baseline shortage is not mislabeled as a scenario impact.');
+
 const surge = runScenario(base.locations, base.lanes, scenario('demand-surge', 'restaurant'));
 assert.ok(surge.scenario.totalDemand > surge.baseline.totalDemand);
 assert.ok(surge.scenario.serviceLevel < surge.baseline.serviceLevel);
@@ -53,8 +82,41 @@ const capacity = runScenario(constrained.locations, constrained.lanes, scenario(
 assert.equal(capacity.scenario.fulfilledDemand, 35);
 const price = runScenario(base.locations, base.lanes, scenario('price-change', 'network'));
 assert.ok(price.scenario.totalLandedCost > price.baseline.totalLandedCost);
+assert.deepEqual(price.impacts, [], 'Price-only changes do not create zero-delta restaurant impact rows.');
 const closure = runScenario(base.locations, base.lanes, scenario('location-closure', 'restaurant', { magnitude: 100 }));
 assert.equal(closure.scenario.totalDemand, 0);
+
+// Finite add-lane changes are active only during their declared window.
+const temporaryLaneFixture = fixture();
+const temporaryLane = structuredClone(temporaryLaneFixture.lanes.find((lane) => lane.id === 'dc-1-restaurant')!);
+temporaryLaneFixture.lanes = temporaryLaneFixture.lanes.filter((lane) => lane.id !== temporaryLane.id);
+const temporaryLaneRun = runScenario(temporaryLaneFixture.locations, temporaryLaneFixture.lanes, scenario('price-change', 'network', {
+  magnitude: 0,
+  horizon: 4,
+  changes: [{ id: 'temporary-lane', kind: 'add-lane', lane: temporaryLane, effectiveDay: 0, durationDays: 2 }],
+}));
+assert.deepEqual(temporaryLaneRun.periodMetrics!.filter((row) => row.locationId === 'restaurant').map((row) => row.fulfilledDemand), [10, 10, 0, 0]);
+
+// An existing lane outside the alternate DC's modeled radius still uses the labeled human-gated path.
+const existingLonghaul = fixture();
+existingLonghaul.locations.find((location) => location.id === 'dc-2')!.serviceRadiusMiles = 8; // The 10-mile lane exceeds the radius, even though the points are closer.
+existingLonghaul.lanes.push({ ...structuredClone(existingLonghaul.lanes.find((lane) => lane.id === 'dc-1-restaurant')!), id: 'dc-2-restaurant', originId: 'dc-2' });
+const existingLonghaulOutage = runScenario(existingLonghaul.locations, existingLonghaul.lanes, scenario('dc-outage', 'dc-1', { magnitude: 100 }));
+const gatedExistingLane = existingLonghaulOutage.recommendations.find((item) => item.proposal?.some((change) => change.kind === 'reassign-restaurant' && change.dcId === 'dc-2'))!;
+assert.ok(gatedExistingLane, 'The existing alternate lane should produce an evaluated recovery option.');
+assert.equal(gatedExistingLane.exceedsServiceRadius, true);
+assert.equal(gatedExistingLane.requiresHumanApproval, true);
+assert.ok(!gatedExistingLane.proposal!.some((change) => change.kind === 'add-lane'), 'The engine reuses the existing lane without inventing another one.');
+
+// A DC unavailable during the source outage is not eligible as an alternate.
+const overlappingOutages = runScenario(base.locations, base.lanes, scenario('price-change', 'network', {
+  magnitude: 0,
+  changes: [
+    { id: 'primary-outage', kind: 'set-location-status', locationId: 'dc-1', status: 'unavailable', effectiveDay: 0, durationDays: 4 },
+    { id: 'alternate-outage', kind: 'set-location-status', locationId: 'dc-2', status: 'unavailable', effectiveDay: 2, durationDays: 4 },
+  ],
+}));
+assert.ok(!overlappingOutages.recommendations.some((item) => item.proposal?.some((change) => change.kind === 'reassign-restaurant' && change.dcId === 'dc-2')), 'Overlapping disruption windows make the alternate DC ineligible.');
 
 // Supplier lead time and inventory position drive daily stockouts and receipts.
 const replenishment = fixture();

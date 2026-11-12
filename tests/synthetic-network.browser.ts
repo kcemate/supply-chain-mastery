@@ -31,6 +31,7 @@ const scans: Array<{ label: string; violations: number; blocking: number }> = []
 const totalLocations = initialLocations.length + syntheticNetwork.locations.length;
 const totalLanes = initialLanes.length + syntheticNetwork.lanes.length;
 const hub = syntheticNetwork.locations.find(location => location.id === syntheticNetwork.scenarioHubId)!;
+const longHaulHub = 'sample-expansion-v1-dc-south-central';
 const scenarioName = 'Synthetic hub outage verification';
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
 let workflowPassed = false;
@@ -116,9 +117,11 @@ try {
   const builder = page.getByRole('dialog', { name: 'Create scenario' });
   await builder.waitFor();
   assert.equal(await builder.getByLabel('Target location').inputValue(), hub.id);
+  // The South Central hub has no useful in-radius fallback in the combined starter + expansion model.
+  await builder.getByLabel('Target location').selectOption(longHaulHub);
   await builder.getByLabel('Scenario name').fill(scenarioName);
   await builder.getByLabel('Time grain').selectOption('daily');
-  await builder.getByRole('spinbutton', { name: 'Horizon', exact: true }).fill('7');
+  await builder.getByRole('spinbutton', { name: 'Horizon', exact: true }).fill('14');
   await builder.getByLabel('Start date').fill('2026-11-09');
   await builder.getByRole('button', { name: 'Run scenario' }).click();
   const result = page.getByRole('dialog', { name: 'Scenario results' });
@@ -126,6 +129,18 @@ try {
   await result.getByText('Frozen input', { exact: true }).waitFor();
   const stockoutDelta = await result.locator('.comparison-grid > div').filter({ hasText: 'Stockout units' }).locator('small').innerText();
   assert.ok(Number(stockoutDelta.replace(/[,\s+]/g, '')) > 0, `Expected a shortage from the hub outage; received ${stockoutDelta}`);
+  await result.getByText(/shortage units · .*shortage cost vs\. baseline/).first().waitFor();
+  const contingency = result.locator('.recommendation-list article').filter({ hasText: 'Human approval required' }).first();
+  await contingency.getByText('Exceeds modeled service radius', { exact: true }).waitFor();
+  const outageStockout = Number((await result.locator('.comparison-grid > div').filter({ hasText: 'Stockout units' }).locator('strong').innerText()).replace(/,/g, ''));
+  await contingency.scrollIntoViewIfNeeded();
+  await snapshot('decision-loop-desktop');
+  await scan('desktop contingency and impact labels');
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await contingency.scrollIntoViewIfNeeded();
+  await snapshot('decision-loop-tablet');
+  await scan('tablet contingency and impact labels');
+  await page.setViewportSize({ width: 1440, height: 960 });
   await result.getByRole('button', { name: 'Save scenario' }).click();
   await result.getByRole('button', { name: 'Saved', exact: true }).waitFor();
   interactions.push('Opened the sample hub, ran a real outage with higher shortages, and saved the frozen result.');
@@ -139,7 +154,22 @@ try {
   interactions.push('Reloaded and proved synthetic sites do not enter the public atlas.');
   const nav = page.getByRole('navigation', { name: 'Primary' });
   await nav.getByRole('button', { name: 'Scenarios', exact: true }).click();
-  await page.getByRole('button', { name: new RegExp(scenarioName) }).waitFor();
+  await page.getByRole('button', { name: new RegExp(scenarioName) }).click();
+  await result.getByRole('heading', { name: scenarioName }).waitFor();
+  await contingency.getByText('Human approval required', { exact: true }).waitFor();
+  const workspaceBeforeDraft = await page.evaluate(() => localStorage.getItem('flyway:v2:flyway-workspace'));
+  assert.ok(workspaceBeforeDraft, 'The expanded workspace and saved outage should be durable before modeling a response.');
+  const contingencyTitle = await contingency.locator('h4').innerText();
+  await contingency.getByRole('button', { name: 'Model this response' }).click();
+  await builder.getByRole('heading', { name: 'Proposed changes in this draft' }).waitFor();
+  await builder.getByRole('button', { name: 'Run scenario' }).click();
+  await result.getByRole('heading', { name: contingencyTitle }).waitFor({ timeout: 90_000 });
+  const recoveredStockout = Number((await result.locator('.comparison-grid > div').filter({ hasText: 'Stockout units' }).locator('strong').innerText()).replace(/,/g, ''));
+  assert.ok(recoveredStockout < outageStockout, `Expected modeled recovery to improve on ${outageStockout} shortages, got ${recoveredStockout}.`);
+  assert.equal(await page.evaluate(() => localStorage.getItem('flyway:v2:flyway-workspace')), workspaceBeforeDraft, 'Modeling a contingency must not change the planning baseline or saved scenarios.');
+  interactions.push(`Reopened the saved approval-gated contingency and modeled it without changing the workspace (${outageStockout} → ${recoveredStockout} shortage units).`);
+  await result.getByRole('button', { name: 'Close scenario results' }).click();
+  await result.waitFor({ state: 'hidden' });
   await nav.getByRole('button', { name: 'Locations', exact: true }).click();
   await panel.getByRole('button', { name: 'Inspect sample hub' }).waitFor();
   assert.equal(await panel.getByRole('button', { name: 'Add synthetic network', exact: true }).count(), 0);
@@ -154,7 +184,7 @@ try {
   await snapshot('locations-tablet-dark');
   await scan('filtered tablet dark registry');
   workflowPassed = true;
-  console.log(`Synthetic expansion workflow passed: ${totalLocations} locations, ${totalLanes} lanes; outage shortage delta ${stockoutDelta}; ${scans.length} axe scans.`);
+  console.log(`Synthetic expansion workflow passed: ${totalLocations} locations, ${totalLanes} lanes; outage shortage delta ${stockoutDelta}; contingency ${outageStockout} → ${recoveredStockout} shortage units; ${scans.length} axe scans.`);
   assert.deepEqual(health, { errors: [], warnings: [], pageErrors: [], failedRequests: [], failedResponses: [] }, 'Strict browser health gate');
 } finally {
   await browser?.close();

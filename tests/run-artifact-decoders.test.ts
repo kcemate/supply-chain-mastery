@@ -5,6 +5,7 @@ import { runScenario } from '../src/flywayEngine';
 import type { RunArtifactReference, SavedScenarioReferenceV2 } from '../src/runArtifacts';
 import { persistRunResult } from '../src/runArtifactRepository';
 import { decodeRunArtifactReference, decodeRunManifest, decodeRunSummary, decodeSavedScenarioReference, decodeStoredScenario } from '../src/runArtifactDecoders';
+import { decodeScenarioResult } from '../src/schemaDecoders';
 
 const scenario = {
   id: 'decoder-run', name: 'Decoder run', description: 'Immutable artifact decoder fixture', type: 'dc-outage' as const,
@@ -30,6 +31,13 @@ const reference: SavedScenarioReferenceV2 = { ...scenario, schemaVersion: 2, sav
 assert.equal(decodeSavedScenarioReference(reference).ok, true);
 assert.equal(decodeStoredScenario(reference).ok, true);
 assert.equal(decodeStoredScenario({ ...scenario, result }).ok, true, 'legacy embedded results remain valid during migration');
+assert.ok(result.impacts.length > 0);
+const legacyResult = { ...result, impacts: result.impacts.map(({ stockoutUnitsDelta: _delta, ...impact }) => impact), recommendations: result.recommendations.map(({ exceedsServiceRadius: _radius, requiresHumanApproval: _approval, ...recommendation }) => recommendation) };
+assert.equal(decodeScenarioResult(legacyResult).ok, true, 'Saved results without the new fields stay readable.');
+assert.equal(decodeScenarioResult({ ...result, impacts: [{ ...result.impacts[0], stockoutUnitsDelta: '4' }] }).ok, false, 'Shortage unit delta must be numeric when present.');
+const taggedRecommendation = { id: 'decoder-contingency', title: 'Contingency', action: 'Model a response', rationale: 'Modeled recovery', serviceDelta: 1, costDelta: 2, confidence: 'Low', affectedLocationIds: [result.impacts[0].locationId], exceedsServiceRadius: true, requiresHumanApproval: true };
+assert.equal(decodeScenarioResult({ ...result, recommendations: [taggedRecommendation] }).ok, true);
+assert.equal(decodeScenarioResult({ ...result, recommendations: [{ ...taggedRecommendation, requiresHumanApproval: 'true' }] }).ok, false, 'Approval metadata must be boolean.');
 
 assert.equal(decodeRunArtifactReference({ ...publication.manifestArtifact, relativePath: '../escape' }).ok, false);
 assert.equal(decodeRunSummary({ ...publication.manifest.summary, impactCount: -1 }).ok, false);

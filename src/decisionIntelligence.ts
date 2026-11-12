@@ -462,9 +462,28 @@ function policyRoute(state: IntelligenceState, network: DecisionNetwork, proposa
       if (fields.some((field) => !['synthetic', 'user-input'].includes(String(capacityEvidence(location, field))))) reasons.push(`Every automatically changed capacity field must be synthetic or user input.`);
     }
   }
+  for (const change of proposal) {
+    if (change.kind !== 'add-lane') continue;
+    const origin = network.locations.find((item) => item.id === change.lane.originId);
+    if (origin?.serviceRadiusMiles != null && change.lane.miles > origin.serviceRadiusMiles + EPSILON) reasons.push(`Lane ${change.lane.id} is ${change.lane.miles} mi, beyond the ${origin.serviceRadiusMiles} mi modeled service radius of ${origin.name}; out-of-radius changes always require human approval.`);
+  }
+  for (const change of proposal) {
+    if (change.kind !== 'reassign-restaurant') continue;
+    const origin = network.locations.find((item) => item.id === change.dcId);
+    const lane = proposal.find((item): item is Extract<ScenarioChange, {kind:'add-lane'}> => item.kind === 'add-lane' && item.lane.originId === change.dcId && item.lane.destinationId === change.restaurantId)?.lane
+      || network.lanes.find((item) => item.originId === change.dcId && item.destinationId === change.restaurantId && item.status !== 'inactive');
+    if (origin?.serviceRadiusMiles != null && lane && lane.miles > origin.serviceRadiusMiles + EPSILON) {
+      const reason = `Lane ${lane.id} is ${lane.miles} mi, beyond the ${origin.serviceRadiusMiles} mi modeled service radius of ${origin.name}; out-of-radius changes always require human approval.`;
+      if (!reasons.includes(reason)) reasons.push(reason);
+    }
+  }
   const serviceGain = after.serviceLevel - before.serviceLevel;
   if (serviceGain + EPSILON < policy.minServiceGainPp) reasons.push(`Service gain ${serviceGain.toFixed(2)} pp is below the ${policy.minServiceGainPp.toFixed(2)} pp rule.`);
   if (after.stockoutUnits > before.stockoutUnits + EPSILON) reasons.push('The candidate increases shortage units.');
+  const beatsDoNothing = after.stockoutUnits < before.stockoutUnits - EPSILON
+    || after.serviceLevel > before.serviceLevel + EPSILON
+    || after.totalLandedCost < before.totalLandedCost - EPSILON;
+  if (!beatsDoNothing) reasons.push('The candidate does not beat doing nothing: it neither reduces shortage units, raises service, nor lowers total landed cost (including shortage penalty). Changes without a measured benefit require human approval.');
   const costIncrease = percentChange(before.totalLandedCost, after.totalLandedCost);
   if (costIncrease > policy.maxCostIncreasePct + EPSILON) reasons.push(`Cost increase ${Number.isFinite(costIncrease) ? costIncrease.toFixed(2) : 'unbounded'}% exceeds the ${policy.maxCostIncreasePct}% rule.`);
   const priorAutoLocationIds = new Set(state.decisions.filter((decision) => decision.status === 'applied' && decision.authority === 'ai').flatMap((decision) => proposalLocationIds(decision.proposal)));

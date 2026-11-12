@@ -16,7 +16,7 @@ import type {
 import { cloneJson } from './canonical';
 import { ENGINE_BUILD_DIGEST } from './buildDigest.generated';
 
-export const ENGINE_VERSION = 'flyway-deterministic-2.0.1';
+export const ENGINE_VERSION = 'flyway-deterministic-2.0.2';
 export { ENGINE_BUILD_DIGEST };
 
 const PRODUCTS: ProductCategory[] = ['Chicken', 'Produce', 'Buns & bakery', 'Packaging', 'Beverages', 'Cooking oil', 'Equipment'];
@@ -276,7 +276,7 @@ function locationsForDay(input: RunInputV2, day: number) {
 
 function lanesForDay(input: RunInputV2, day: number, date: Date): DynamicLane[] {
   const values = cloneJson(input.lanes);
-  for (const change of input.changes) if (change.kind === 'add-lane' && changeHasStarted(change, day) && !values.some((item) => item.id === change.lane.id)) values.push(cloneJson(change.lane));
+  for (const change of input.changes) if (change.kind === 'add-lane' && changeIsActive(change, day) && !values.some((item) => item.id === change.lane.id)) values.push(cloneJson(change.lane));
   const removed = new Set(input.changes.flatMap((change) => change.kind === 'remove-lane' && changeHasStarted(change, day) ? [change.laneId] : []));
   return values.filter((lane) => !removed.has(lane.id) && laneOpen(lane, date)).map((lane) => {
     let capacityMultiplier = 1;
@@ -650,7 +650,12 @@ export function simulateInput(input: RunInputV2): SimulationCore {
   };
 }
 
-export function impactsBetween(baseline: SimulationCore, scenario: SimulationCore): LocationImpact[] {
+function shortagePenaltyMicros(rows: PeriodProductMetric[], defaults: EngineDefaults) {
+  if (!defaults.includeShortagePenalty) return 0;
+  return rows.reduce((sum, row) => sum + row.stockoutQuantity * (defaults.shortagePenaltyMicrosByProduct[row.product] || 0), 0);
+}
+
+export function impactsBetween(baseline: SimulationCore, scenario: SimulationCore, defaults: EngineDefaults): LocationImpact[] {
   const group = (rows: PeriodProductMetric[]) => rows.reduce((result, metric) => {
     const values = result.get(metric.locationId) || [];
     values.push(metric);
@@ -671,6 +676,7 @@ export function impactsBetween(baseline: SimulationCore, scenario: SimulationCor
     const scenarioService = demand > 0 ? fulfilled / demand * 100 : 100;
     const stockout = Math.max(0, demand - fulfilled);
     const baseStockout = Math.max(0, baseDemand - baseFulfilled);
-    return { locationId, serviceDelta: round(scenarioService - baselineService, 1), stockoutUnits: Math.round(stockout), costDelta: Math.round(stockout - baseStockout), cause: stockout > baseStockout + EPSILON ? 'Product-period demand exceeds a feasible inventory and lane path' : 'Modeled service changed under the scenario' };
-  }).filter((impact) => Math.abs(impact.serviceDelta) > 0.05 || impact.stockoutUnits > 0).sort((left, right) => right.stockoutUnits - left.stockoutUnits || left.locationId.localeCompare(right.locationId));
+    return { locationId, serviceDelta: round(scenarioService - baselineService, 1), stockoutUnits: Math.round(stockout), stockoutUnitsDelta: Math.round(stockout - baseStockout), costDelta: Math.round((shortagePenaltyMicros(scenarioRows, defaults) - shortagePenaltyMicros(baseRows, defaults)) / 1_000_000), cause: stockout > baseStockout + EPSILON ? 'Product-period demand exceeds a feasible inventory and lane path' : 'Modeled service changed under the scenario' };
+  }).filter((impact) => Math.abs(impact.serviceDelta) > 0.05 || Math.abs(impact.stockoutUnitsDelta || 0) > 0 || Math.abs(impact.costDelta) > 0)
+    .sort((left, right) => right.stockoutUnits - left.stockoutUnits || left.locationId.localeCompare(right.locationId));
 }

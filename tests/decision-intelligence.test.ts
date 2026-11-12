@@ -17,6 +17,7 @@ import { defaultEngineDefaults, runInput, runScenario } from '../src/flywayEngin
 import type { DecisionCandidateDefinition } from '../src/intelligenceTypes';
 import type { Evidence, Lane, ScenarioDefinition, TwinLocation } from '../src/flywayTypes';
 import { initialLocations } from '../src/flywayData';
+import { syntheticNetwork } from '../src/syntheticNetwork';
 
 const product = 'Chicken' as const;
 const evidence: Evidence = { classification: 'synthetic', confidence: 0, sourceTitle: 'Decision Intelligence test fixture', publisher: 'Flyway', verifiedAt: '2026-11-06', note: 'Synthetic deterministic fixture.' };
@@ -196,4 +197,52 @@ assert.throws(() => generateDecisionCandidates(disrupted, original), /explicit n
 assert.throws(() => buildDecisionRecord({ state: createIntelligenceState(), network: original, sourceResult: source, candidate: bounded!, candidateResult: { ...boundedResult, inputHash: 'tampered' }, at }), /input identity does not match|does not match the proposed frozen input/i);
 assert.throws(() => applyDecisionToNetwork(externallyChanged, held.decision, at, 'human'), /stale/i);
 
-console.log('Decision Intelligence domain passed evaluated candidate generation, bounded automatic application, human approval/rejection, provenance, deep validation, idempotency, and stale/unsupported decision safety.');
+// A candidate with no measured benefit over doing nothing must never be applied automatically, even when it is
+// inside every bounded capacity and cost limit. The synthetic network's daily baseline is already at 100% service.
+const synthetic: DecisionNetwork = { locations: structuredClone(syntheticNetwork.locations) as TwinLocation[], lanes: structuredClone(syntheticNetwork.lanes) as Lane[], defaults: { ...structuredClone(defaultEngineDefaults), startDate: '2026-11-09' } };
+const syntheticSource = runScenario(synthetic.locations, synthetic.lanes, { ...baselineScenario(synthetic), horizon: 28 }, synthetic.defaults);
+assert.equal(syntheticSource.scenario.serviceLevel, 100);
+assert.equal(syntheticSource.scenario.stockoutUnits, 0);
+const noBenefit = generateDecisionCandidates(syntheticSource, synthetic, createIntelligenceState()).find((candidate) => candidate.proposal.some((change) => change.kind === 'adjust-capacity' && change.multiplier === 1.05))!;
+assert.ok(noBenefit, 'The bounded capacity candidate is still generated and evaluated.');
+const noBenefitResult = evaluate(syntheticSource, noBenefit);
+assert.ok(noBenefitResult.scenario.serviceLevel <= syntheticSource.scenario.serviceLevel && noBenefitResult.scenario.stockoutUnits >= syntheticSource.scenario.stockoutUnits && noBenefitResult.scenario.totalLandedCost >= syntheticSource.scenario.totalLandedCost, 'Fixture precondition: the candidate does not beat doing nothing.');
+const noBenefitDecision = recordEvaluatedDecision({ state: createIntelligenceState(), network: synthetic, sourceResult: syntheticSource, candidate: noBenefit, candidateResult: noBenefitResult, at });
+assert.equal(noBenefitDecision.autoApplied, false, 'A change with zero service gain and a cost increase cannot auto-apply.');
+assert.equal(noBenefitDecision.decision.authority, 'human');
+assert.equal(noBenefitDecision.decision.status, 'awaiting-human');
+assert.match(noBenefitDecision.decision.policyReasons.join(' '), /does not beat doing nothing/i);
+assert.deepEqual(noBenefitDecision.locations, synthetic.locations, 'The planning network is untouched until a person decides.');
+assert.deepEqual(noBenefitDecision.lanes, synthetic.lanes, 'A no-benefit candidate cannot mutate modeled routes.');
+assert.deepEqual(noBenefitDecision.defaults, synthetic.defaults, 'A no-benefit candidate cannot mutate engine defaults.');
+const legacyPolicyState = { ...createIntelligenceState(), policy: { autonomyEnabled: true, maxCapacityIncreasePct: 5, maxCostIncreasePct: 2, maxLocations: 1, minServiceGainPp: 0 } };
+assert.equal(isIntelligenceState(legacyPolicyState), true, 'Persisted states saved with the previous default policy still validate.');
+
+// A temporary hub outage produces an out-of-radius contingency recommendation, but disruption runs still cannot
+// become durable planning-model decisions, and any out-of-radius lane routed through policy requires a person.
+const hubOutage = runScenario(synthetic.locations, synthetic.lanes, { ...baselineScenario(synthetic), id: 'hub-outage', horizon: 28, changes: [{ id: 'hub-outage', kind: 'set-location-status', locationId: syntheticNetwork.scenarioHubId, status: 'unavailable', effectiveDay: 3, durationDays: 7 }] }, synthetic.defaults);
+const outOfRadius = hubOutage.recommendations.find((item) => item.exceedsServiceRadius)!;
+assert.ok(outOfRadius && outOfRadius.requiresHumanApproval === true);
+assert.throws(() => generateDecisionCandidates(hubOutage, synthetic), /explicit no-change planning baseline/i, 'Temporary disruption responses are not silently converted into durable model edits.');
+const durableLongHaul: DecisionCandidateDefinition = {
+  id: 'durable-long-haul', title: 'Durable long-haul assignment', summary: 'Review a durable out-of-radius lane.', rationale: 'Out-of-radius lanes always require a person.',
+  affectedLocationIds: outOfRadius.affectedLocationIds.slice(0, 1),
+  proposal: outOfRadius.proposal!.filter((change) => (change.kind === 'add-lane' && change.lane.destinationId === outOfRadius.affectedLocationIds[0]) || (change.kind === 'reassign-restaurant' && change.restaurantId === outOfRadius.affectedLocationIds[0])).map((change) => { const { durationDays: _duration, ...rest } = change; return { ...rest, effectiveDay: 0 } as typeof change; }),
+};
+assert.equal(durableLongHaul.proposal.length, 2);
+const longHaulDecision = recordEvaluatedDecision({ state: createIntelligenceState(), network: synthetic, sourceResult: syntheticSource, candidate: durableLongHaul, candidateResult: evaluate(syntheticSource, durableLongHaul), at });
+assert.equal(longHaulDecision.decision.authority, 'human');
+assert.equal(longHaulDecision.autoApplied, false);
+assert.match(longHaulDecision.decision.policyReasons.join(' '), /beyond the .* modeled service radius/i);
+
+const longHaulLane = durableLongHaul.proposal.find((change): change is Extract<DecisionCandidateDefinition['proposal'][number], {kind:'add-lane'}> => change.kind === 'add-lane')!.lane;
+const longHaulReassignment = durableLongHaul.proposal.find((change): change is Extract<DecisionCandidateDefinition['proposal'][number], {kind:'reassign-restaurant'}> => change.kind === 'reassign-restaurant')!;
+const preexistingLongHaulNetwork: DecisionNetwork = { ...synthetic, lanes: [...structuredClone(synthetic.lanes), structuredClone(longHaulLane)] };
+const preexistingLongHaulSource = runScenario(preexistingLongHaulNetwork.locations, preexistingLongHaulNetwork.lanes, { ...baselineScenario(preexistingLongHaulNetwork), horizon: 28 }, preexistingLongHaulNetwork.defaults);
+const preexistingLaneCandidate: DecisionCandidateDefinition = { id: 'preexisting-long-haul', title: 'Reassign over an existing long-haul lane', summary: 'Review a pre-existing out-of-radius lane.', rationale: 'An existing lane does not waive geographic review.', affectedLocationIds: [longHaulReassignment.restaurantId], proposal: [longHaulReassignment] };
+const preexistingLaneDecision = recordEvaluatedDecision({ state: createIntelligenceState(), network: preexistingLongHaulNetwork, sourceResult: preexistingLongHaulSource, candidate: preexistingLaneCandidate, candidateResult: evaluate(preexistingLongHaulSource, preexistingLaneCandidate), at });
+assert.equal(preexistingLaneDecision.decision.authority, 'human');
+assert.equal(preexistingLaneDecision.autoApplied, false);
+assert.match(preexistingLaneDecision.decision.policyReasons.join(' '), /beyond the .* modeled service radius/i, 'A pre-existing lane cannot bypass the out-of-radius human gate.');
+
+console.log('Decision Intelligence domain passed genuine-benefit automatic application, no-benefit preservation, new and pre-existing out-of-radius human routing, approval history, provenance, validation, idempotency, and stale safety.');

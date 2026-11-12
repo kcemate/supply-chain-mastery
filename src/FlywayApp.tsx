@@ -560,6 +560,7 @@ function ResultsDrawer({ result, scenario, locations, onClose, onSave, onRerun, 
   const byId = new Map(locations.map((location) => [location.id, location]));
   const impacts=useRunPage(result.reader,'impacts'),recommendations=useRunPage(result.reader,'recommendations');
   const delta = (key: keyof Pick<TwinMetrics, 'serviceLevel' | 'stockoutUnits' | 'totalLandedCost' | 'maxUtilization'>) => Number(result.scenario[key]) - Number(result.baseline[key]);
+  const signed = (value: number, format: (value: number) => string = value => value.toLocaleString()) => `${value > 0 ? '+' : ''}${format(value)}`;
   return (
     <aside className="detail-drawer results-drawer t-panel-slide" data-open={open} role="dialog" aria-modal="true" aria-label="Scenario results">
       <div className="drawer-header"><div><span className="eyebrow">Completed · {result.runId}</span><h2>{scenario.name}</h2><p>{scenario.grain} model · {scenario.horizon} periods · {result.engineVersion}</p></div><button type="button" className="icon-button" onClick={onClose} aria-label="Close scenario results"><X size={19} /></button></div>
@@ -567,19 +568,34 @@ function ResultsDrawer({ result, scenario, locations, onClose, onSave, onRerun, 
         <section className="result-narrative"><Sparkles size={19} /><p>{result.narrative}</p></section>
         <div className="comparison-grid">
           <div><span>Service level</span><strong>{result.scenario.serviceLevel.toFixed(1)}%</strong><small className={delta('serviceLevel') < 0 ? 'negative' : 'positive'}>{delta('serviceLevel') >= 0 ? '+' : ''}{delta('serviceLevel').toFixed(1)} pts</small></div>
-          <div><span>Stockout units</span><strong>{result.scenario.stockoutUnits.toLocaleString()}</strong><small className={delta('stockoutUnits') > 0 ? 'negative' : 'positive'}>+{delta('stockoutUnits').toLocaleString()}</small></div>
-          <div><span>Landed cost</span><strong>{formatMoney(result.scenario.totalLandedCost)}</strong><small className={delta('totalLandedCost') > 0 ? 'negative' : 'positive'}>+{formatMoney(delta('totalLandedCost'))}</small></div>
+          <div><span>Stockout units</span><strong>{result.scenario.stockoutUnits.toLocaleString()}</strong><small className={delta('stockoutUnits') > 0 ? 'negative' : 'positive'}>{signed(delta('stockoutUnits'))}</small></div>
+          <div><span>Landed cost</span><strong>{formatMoney(result.scenario.totalLandedCost)}</strong><small className={delta('totalLandedCost') > 0 ? 'negative' : 'positive'}>{signed(delta('totalLandedCost'), formatMoney)}</small></div>
           <div><span>Peak utilization</span><strong>{result.scenario.maxUtilization.toFixed(1)}%</strong><small className={delta('maxUtilization') > 0 ? 'negative' : 'positive'}>{delta('maxUtilization') >= 0 ? '+' : ''}{delta('maxUtilization').toFixed(1)} pts</small></div>
         </div>
         <section className="drawer-section"><div className="section-heading"><h3>{result.impactCount} modeled impacts</h3></div>
           {impacts.loading&&<p role="status">Loading saved impact records…</p>}{impacts.error&&<p role="alert">{impacts.error} <button type="button" onClick={impacts.retry}>Retry impacts</button></p>}
-          <div className="impact-list">{impacts.page?.items.map(impact=><div key={impact.locationId}><span className="impact-dot"/><span><strong>{byId.get(impact.locationId)?.name||impact.locationId}</strong><small>{impact.cause}</small></span><b>{impact.stockoutUnits.toLocaleString()} units</b></div>)}{impacts.page?.total===0&&<p className="empty-copy">No restaurant-period stockouts in this scenario.</p>}</div>
+          <div className="impact-list">{impacts.page?.items.map(impact=><div key={impact.locationId}>
+            <span className="impact-dot"/><span>
+              <strong>{byId.get(impact.locationId)?.name||impact.locationId}</strong>
+              <small>{impact.cause}</small>
+              {impact.stockoutUnitsDelta!==undefined&&<small>{signed(impact.stockoutUnitsDelta)} shortage units · {signed(impact.costDelta, formatMoney)} shortage cost vs. baseline</small>}
+            </span><b>{impact.stockoutUnits.toLocaleString()} units</b>
+          </div>)}{impacts.page?.total===0&&<p className="empty-copy">No restaurant-period stockouts in this scenario.</p>}</div>
           {result.impactCount>0&&<RunPageControls page={impacts.pageNumber} total={impacts.page?.total} hasPrevious={impacts.hasPrevious} hasNext={!!impacts.page?.nextCursor} loading={impacts.loading} onPrevious={impacts.previous} onNext={impacts.next}/>}
         </section>
         <section className="drawer-section"><div className="section-heading"><h3>Explainable recovery actions</h3></div>
           {recommendations.loading&&<p role="status">Loading evaluated responses…</p>}{recommendations.error&&<p role="alert">{recommendations.error} <button type="button" onClick={recommendations.retry}>Retry responses</button></p>}
           {recommendations.page?.total===0&&<p>No feasible evaluated improvement was found in this run.</p>}
-          <div className="recommendation-list">{recommendations.page?.items.map(recommendation=><article key={recommendation.id}><div><h4>{recommendation.title}</h4><p>{recommendation.action}</p><small>{recommendation.rationale}</small><div className="recommendation-impact"><span>{recommendation.serviceDelta>=0?'+':''}{recommendation.serviceDelta.toFixed(1)} pts service</span><span>{formatMoney(recommendation.costDelta)}</span><span>{recommendation.confidence} confidence</span></div><button type="button" onClick={()=>onApply(recommendation)}>Model this response <ArrowRight size={14}/></button></div></article>)}</div>
+          <div className="recommendation-list">{recommendations.page?.items.map(recommendation=><article key={recommendation.id}><div>
+            <h4>{recommendation.title}</h4><p>{recommendation.action}</p><small>{recommendation.rationale}</small>
+            <div className="recommendation-impact">
+              <span>{signed(recommendation.serviceDelta, value => value.toFixed(1))} pts service</span><span>{signed(recommendation.costDelta, formatMoney)} landed cost</span><span>{recommendation.confidence} confidence</span>
+              {recommendation.exceedsServiceRadius&&<span>Exceeds modeled service radius</span>}
+              {recommendation.requiresHumanApproval&&<span>Human approval required</span>}
+            </div>
+            {recommendation.requiresHumanApproval&&<small>Modeling this response does not approve it or change the planning baseline.</small>}
+            <button type="button" onClick={()=>onApply(recommendation)}>Model this response <ArrowRight size={14}/></button>
+          </div></article>)}</div>
           {result.recommendationCount>0&&<RunPageControls page={recommendations.pageNumber} total={recommendations.page?.total} hasPrevious={recommendations.hasPrevious} hasNext={!!recommendations.page?.nextCursor} loading={recommendations.loading} onPrevious={recommendations.previous} onNext={recommendations.next}/>}
         </section>
         <section className="run-lineage"><span><strong>Frozen input</strong>{result.inputHash}</span><span><strong>Baseline</strong>{scenario.baselineRevision}</span><span><strong>Completed</strong>{new Date(result.completedAt).toLocaleString()}</span></section>

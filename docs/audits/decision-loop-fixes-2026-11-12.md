@@ -1,0 +1,17 @@
+# Flyway decision-loop verification — November 12, 2026
+
+## Implemented
+
+- `src/decisionIntelligence.ts` requires a measurable service, shortage, or landed-cost benefit over doing nothing before automatic model application. The existing size, provenance, harm, cost, and repeat-change limits still apply. Structural proposals still require human review; measured gain alone is not sufficient.
+- `src/flywayEngine.ts` evaluates outage-window contingencies against the frozen inputs when no ordinary in-radius alternate improves service. Candidates must improve modeled service; proposals are labeled for human approval, identify radius exceptions, and time-limit their lane and assignment changes. The bounded nearest and two-nearest search is not a route optimizer. New lanes are fictional estimates, including any assumed team-driver schedule. The result action only models a new what-if.
+- `src/engine/simulator.ts` reports restaurant shortage units and signed shortage-penalty dollars as distinct fields. Old stored results remain readable and do not present legacy unit-valued fields as currency. The shortage cost is modeled, not cash freight spend.
+
+## Current verification
+
+- Engine version `flyway-deterministic-2.0.2`; digest `1837b3fccea5fc1d90ed060f54b37efcb72ca80c1924abd0fd4849fcd6ed2f55`. `dist/index.html` SHA-256: `9e91536ef27a07f924f1aba38bc0838bd2e51b94815a57f047008a2a5faa4532`.
+- Production build, focused engine, synthetic data, decision policy, artifact decoder, and platform tests passed. The engine digest check and `git diff --check` passed. `npm run design:lint` had zero errors or warnings; the Impeccable detector returned no findings in the two edited UI files. The production build retains a Vite chunk-size advisory.
+- The synthetic network browser test installed 132 locations and 124 lanes, saved and reopened a 14-day hub outage, checked radius and human-review labels, and modeled the suggested response in a frozen draft. Shortages dropped from 98,651 to 80,046 units with no change to the persisted planning workspace. Four axe scans reported zero violations. Inspected `tasks/browser-evidence/synthetic-network-decision-loop-desktop.png`, `tasks/browser-evidence/synthetic-network-decision-loop-tablet.png`, and `tasks/browser-evidence/synthetic-network-locations-tablet-dark.png`.
+- Strict `npm run verify` is not green. One run stopped on two headless Chromium/WebGL `GPU stall due to ReadPixels` warnings in the Decision Intelligence prototype. The final run passed that test and stopped at the connected view's axe color-contrast assertion (a primary button after approval, 2.76:1 measured versus 4.5:1 required). The standalone connected test passed that same axe assertion, completed its fake-provider recovery and saved-state workflow, and then stopped on the headless WebGL warnings. The contrast finding did not reproduce in both runs and is unresolved.
+- The focused synthetic workflow also returned a nonzero health gate after its functional and accessibility checks passed: two headless WebGL warnings, no application errors, page errors, failed requests, or failed responses. See `tasks/browser-evidence/synthetic-network-browser-receipt.json`. Assertions and warning collection remain unchanged.
+
+Local preview returned HTTP 200 and serves the current engine digest. No Git push, deployment, paid AI call, or change to the user's stored workspace was performed.

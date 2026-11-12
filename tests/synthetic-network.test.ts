@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { runScenario } from '../src/flywayEngine';
+import { applyRecommendationProposal, replayRun, runScenario } from '../src/flywayEngine';
 import { decodeWorkspaceDocument } from '../src/schemaDecoders';
 import { addSyntheticNetwork, SYNTHETIC_NETWORK_VERSION, syntheticNetwork } from '../src/syntheticNetwork';
 import type { Lane, ScenarioDefinition, TwinLocation } from '../src/flywayTypes';
@@ -148,6 +148,37 @@ const surge = runScenario(syntheticNetwork.locations, syntheticNetwork.lanes, sc
 assert.ok(surge.scenario.totalDemand > surge.baseline.totalDemand);
 assert.ok(surge.scenario.stockoutUnits > surge.baseline.stockoutUnits, 'A severe local surge should exercise actual lane/inventory limits.');
 
+// A temporary hub outage with no in-radius alternate produces a labeled, human-gated out-of-radius contingency
+// that the deterministic engine evaluates like any other recommendation.
+const dailyHorizon: Partial<ScenarioDefinition> = { grain: 'daily', horizon: 28, startDate: '2026-11-09' };
+const hubOutageWindow = runScenario(syntheticNetwork.locations, syntheticNetwork.lanes, { ...scenario('dc-outage', syntheticNetwork.scenarioHubId, 0), ...dailyHorizon, id: 'synthetic-hub-outage-window', type: 'price-change', changes: [{ id: 'hub-outage', kind: 'set-location-status', locationId: syntheticNetwork.scenarioHubId, status: 'unavailable', effectiveDay: 3, durationDays: 7 }] }, { startDate: '2026-11-09' });
+assert.ok(hubOutageWindow.scenario.stockoutUnits > hubOutageWindow.baseline.stockoutUnits + 10_000, 'The temporary hub outage should create material unmet demand.');
+const contingency = hubOutageWindow.recommendations.find((item) => item.exceedsServiceRadius);
+assert.ok(contingency, 'A hub outage without an in-radius alternate must still yield an evaluated reassignment recommendation.');
+assert.equal(contingency!.requiresHumanApproval, true);
+assert.match(contingency!.title, /exceeds modeled service radius/i);
+assert.match(contingency!.action, /requires human approval/i);
+assert.ok(contingency!.serviceDelta > 0, 'Out-of-radius contingencies are kept only when they improve service.');
+const hubRestaurants = restaurants.filter((item) => item.assignedDcId === syntheticNetwork.scenarioHubId).map((item) => item.id).sort();
+assert.deepEqual(contingency!.affectedLocationIds, hubRestaurants);
+for (const change of contingency!.proposal!) {
+  assert.equal(change.effectiveDay, 3, 'The contingency starts with the outage, not on day 0.');
+  if (change.kind === 'reassign-restaurant') assert.equal(change.durationDays, 7, 'The reassignment is temporary and ends with the outage window.');
+  if (change.kind === 'add-lane') {
+    assert.equal(change.durationDays, 7, 'A temporary contingency lane ends with the outage window.');
+    assert.equal(change.lane.evidence.classification, 'derived');
+    assert.match(change.lane.evidence.note || '', /exceeds the modeled service radius/i);
+    const origin = syntheticNetwork.locations.find((item) => item.id === change.lane.originId)!;
+    assert.ok(change.lane.miles > origin.serviceRadiusMiles!, 'Labeled long-haul lanes really are beyond the modeled service radius.');
+  }
+}
+const contingencyResult = applyRecommendationProposal(hubOutageWindow, contingency!);
+assert.equal(contingencyResult.inputHash, contingency!.candidateInputHash);
+assert.ok(contingencyResult.scenario.stockoutUnits < hubOutageWindow.scenario.stockoutUnits, 'Applying the contingency reproduces a real shortage reduction.');
+assert.equal(contingencyResult.scenario.totalLandedCost - hubOutageWindow.scenario.totalLandedCost, contingency!.costDelta);
+assert.equal(replayRun(hubOutageWindow.input!).outputChecksum, hubOutageWindow.outputChecksum, 'Contingency generation keeps outage runs deterministic.');
+assert.deepEqual(replayRun(hubOutageWindow.input!).recommendations, hubOutageWindow.recommendations);
+
 console.log(JSON.stringify({
   version: syntheticNetwork.version,
   counts: { locations: syntheticNetwork.locations.length, dcs: dcs.length, restaurants: restaurants.length, suppliers: suppliers.length, lanes: syntheticNetwork.lanes.length },
@@ -156,4 +187,5 @@ console.log(JSON.stringify({
   hubOutage: outage.scenario,
   redundantSupplierFailure: supplierFailure.scenario,
   surge: surge.scenario,
+  hubOutageWindow: { scenario: hubOutageWindow.scenario, contingency: { id: contingency!.id, serviceDelta: contingency!.serviceDelta, costDelta: contingency!.costDelta, stockoutUnits: contingencyResult.scenario.stockoutUnits } },
 }, null, 2));
